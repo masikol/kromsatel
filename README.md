@@ -49,9 +49,11 @@ cd amplicons-db
 makeblastdb -in nCoV-2019_amplicons.fasta -dbtype nucl -parse_seqids
 ```
 
+You can use other set of amplicons, for example the alternative one: `nCoV-2019-alt_amplicons.fasta` (it is generated using [this](https://github.com/ItokawaK/Alt_nCov2019_primers) primer set). You can also create your own amplicons for your primers using script `make-amplicons.sh` (see section "Creating your own amplicons" below).
+
 When the database is created, you can proceed with cleaning.
 
-#### Running kromsatel
+#### Run kromsatel
 
 ```
 ./kromsatel.py <YOUR_READS> -d amplicons-db/nCoV-2019_amplicons.fasta 
@@ -84,7 +86,58 @@ Example of read name in an output file:
   @98786bd2-88a6-43ca-8c69-704992ad69cb_28-98
 ```
 
-### Temporary files
+### Creating your own amplicons
+
+You can create your own amplicons for your primers using script `make-amplicons.sh`.
+
+To do this, you should configure proper CSV (`primer_name,primer_seq`) file containing your primers. You can use file `primers/nCov-2019_primers.csv` as example. "Proper" means the following:
+
+1. Primers names and sequences must be separated with comma.
+
+2. Order of primers is crucial, so keep order exactly as in this example file.
+
+#### Depencenies
+
+This script depends on [seqkit](https://github.com/shenwei356/seqkit).
+
+#### Input:
+
+1. CSV File containing primers (see file `primers/nCov-2019_primers.csv` for example);
+
+2. Genome (in fasta format) of damned coronavirus (I use this one: [NC_045512](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512)).
+
+#### Output:
+1. Fasta file containing amplicons and ready for database creation, just like `amplicons-db/nCoV-2019_amplicons.fasta`.
+
+#### Options:
+```
+ -h -- print help message and exit;
+ -p -- CSV file with primers  (mandatory);
+ -g -- fasta file with genome (mandatory);
+ -o -- output fasta file with amplicons;
+       default value: \`./corona-amplicons.fasta\`
+ -s -- path to \`seqkit\` executable
+       (if \`seqkit\` is in your PATH, just omit this option);
+ ```
+
+#### Usage:
+```
+  bash make-amplicons.sh <-p primers_csv> <-g genome_fasta> [-o outout_fasta] [-s seqkit_path]
+```
+#### Examples:
+
+Case 1. `seqkit` is in PATH
+```
+  bash make-amplicons.sh -p my_primers.csv -g Wuhan-Hu-1-compele-genome.fasta \
+  -o amplicons-db/my_amplicons.fasta
+```
+Case 2. `seqkit` is not in PATH
+```
+  bash make-amplicons.sh -p my_primers.csv -g Wuhan-Hu-1-compele-genome.fasta \
+  -o amplicons-db/my_amplicons.fasta -s /home/me/seqkit/bin/seqkit
+```
+
+### Kromsatel temporary files
 
 While working, "kromsatel" creates temporary files and writes queries for "blastn" to them. If you terminate "kromsatel" or if it exits with error, they might be left after run.
 
@@ -96,3 +149,4 @@ Naming schema of these files is following:
 kromsatel_query_<PID>.fasta
 ```
 , where PID is process ID of "kromsatel" process.
+
