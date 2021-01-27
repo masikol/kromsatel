@@ -1,5 +1,11 @@
 # kromsatel changelog
 
+## 2021-01-27 afternoon edition
+
+kromsatel.py: made the algorithm less brutal to those reads which do not span from primer to primer. Now kromsatel allows offset of 10 bp from both ends.
+
+Version change: `1.3.a --> 1.3.b`.
+
 ## 2021-01-27 edition
 
 Added script `make-amplicons.sh` and new (alternative) set of amplicons: `amplicons-db/nCoV-2019-alt_amplicons.fasta`.

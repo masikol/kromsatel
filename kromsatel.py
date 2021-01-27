@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__version__ = "1.3.a"
+__version__ = "1.3.b"
 # Year, month, day
-__last_update_date__ = "2021-01-06"
+__last_update_date__ = "2021-01-27"
 
 # |===== Check python interpreter version. =====|
 
@@ -429,7 +429,7 @@ def write_fastq_record(fq_record, outfile):
 
 
 # Positions in BLAST+ are 1-based
-MAX_EDGE_OFFSET = 1
+MAX_EDGE_OFFSET = 10
 
 
 def set_touch_start(row):
@@ -441,9 +441,9 @@ def set_touch_start(row):
     # :type row: pandas.Series;
 
     if row['sstrand']:
-        row['touch_start'] = row['sstart'] < MAX_EDGE_OFFSET + 2
+        row['touch_start'] = row['sstart'] < 1 + MAX_EDGE_OFFSET
     else:
-        row['touch_start'] = row['sstart'] > row['slen'] - 2
+        row['touch_start'] = row['sstart'] > row['slen'] - MAX_EDGE_OFFSET
     # end if
 
     return row
@@ -459,9 +459,9 @@ def set_touch_end(row):
     # :type row: pandas.Series;
 
     if row['sstrand']:
-        row['touch_end'] = row['send'] > row['slen'] - 1 - MAX_EDGE_OFFSET
+        row['touch_end'] = row['send'] > row['slen'] - MAX_EDGE_OFFSET
     else:
-        row['touch_end'] = row['send'] < MAX_EDGE_OFFSET + 2
+        row['touch_end'] = row['send'] < 1 + MAX_EDGE_OFFSET
     # end if
 
     return row
