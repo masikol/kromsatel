@@ -115,9 +115,9 @@ This script depends on [seqkit](https://github.com/shenwei356/seqkit).
  -p -- CSV file with primers  (mandatory);
  -g -- fasta file with genome (mandatory);
  -o -- output fasta file with amplicons;
-       default value: \`./corona-amplicons.fasta\`
- -s -- path to \`seqkit\` executable
-       (if \`seqkit\` is in your PATH, just omit this option);
+       default value: ./corona-amplicons.fasta
+ -s -- path to seqkit executable
+       (if seqkit is in your PATH, just omit this option);
  ```
 
 #### Usage:
