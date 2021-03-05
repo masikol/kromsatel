@@ -1,8 +1,17 @@
 # kromsatel changelog
 
+## 2021-03-05 afternoon edition
+
+- Improved performance ~ 2.3 times.
+- Enabled parallel read processing (`-t`).
+- Changed the very algorithm: it no longer looks if an alignment spans from primer to primer (or "starts" at one primer and interrupts somewhere in beteen). Now it just removes too short alignments (see options `--am` and `--im`).
+- Added options `-c`, `--am`, `--im`.
+
+Version change: `1.3.b --> 1.4.a`.
+
 ## 2021-01-27 afternoon edition
 
-kromsatel.py: made the algorithm less brutal to those reads which do not span from primer to primer. Now kromsatel allows offset of 10 bp from both ends.
+Made the algorithm less brutal to those reads which do not span from primer to primer. Now kromsatel allows offset of 10 bp from both ends (this offset is no longer actual).
 
 Version change: `1.3.a --> 1.3.b`.
 

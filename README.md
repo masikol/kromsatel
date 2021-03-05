@@ -2,15 +2,13 @@
 
 ### Description
 
-A script for preprocessing raw reads obtained using [ARTIC's protocol](https://artic.network/ncov-2019) for sequencing SARS-CoV-2 genome. Here, "preprocessing" stands for splitting concatemer reads into consistent fragments according to primer scheme described in the [protocol](https://artic.network/ncov-2019).
+A script for preprocessing raw reads obtained using [ARTIC's protocol](https://artic.network/ncov-2019) for sequencing SARS-CoV-2 genome. Here, "preprocessing" stands for splitting chimeric reads into consistent fragments according to primer scheme described in the [protocol](https://artic.network/ncov-2019) (or according to your own primer scheme).
 
 Brief description of the algorithm:
 
 1. Align given read against amplicons using `blastn` program from BLAST+ toolkit (discontiguous megablast is used).
 
-2. Extract alignments, which simultaneously:
-    - Do start and/or end at 5'- and/or 3'-terminus of any amplicon.
-    - Do not overlap within the read.
+2. Extract alignments, which do not overlap within the read and are long enough (see section "Options" about this "long enough").
 
 3. Split the read into these aligned non-overlapping fragments (major amplicons are preferred).
 
@@ -42,9 +40,9 @@ Brief description of the algorithm:
 
 #### Get started -- create the database
 
-To create database of SARS-Cov-2 amplicons, do the following:
+To create database of amplicons, do the following:
 
-```
+```console
 cd amplicons-db
 makeblastdb -in nCoV-2019_amplicons.fasta -dbtype nucl -parse_seqids
 ```
@@ -55,16 +53,41 @@ When the database is created, you can proceed with cleaning.
 
 #### Run kromsatel
 
-```
+#### Basic usage
+
+```console
 ./kromsatel.py <YOUR_READS> -d amplicons-db/nCoV-2019_amplicons.fasta 
 ```
 
-You can also pass number of threads with `-t` option to align your reads in parallel. Further "cleaning" is still not parallelized :(.
+#### Options
+
+```
+-h (--help) -- print help message and exit.
+
+-v (--version) -- print version and exit.
+
+-d (--db) -- path to BLAST database of amplicons.
+    Mandatory option (it sounds like an oxymoron but anyway).
+
+-t (--threads) -- number of threads to launch.
+    Default: 1 thread.
+
+--am -- minimum length of alignment against major amplicon.
+    Shorter alignments will not be considered.
+    Default: 100 bp.
+
+--im -- minimum length of alignment against minor amplicon.
+    Shorter alignments will not be considered.
+    Default: 25 bp.
+
+-c (--chunk-size) -- number of reads to blast within a single query.
+    Default: 1000 reads.
+```
 
 
 #### Example
-```
-./kromsatel.py corona_reads.fastq -d amplicons-db/nCoV-2019_amplicons.fasta 
+```console
+./kromsatel.py corona_reads.fastq -d amplicons-db/nCoV-2019_amplicons.fasta -t 4 --am 150
 ```
 
 ### Output file
@@ -96,7 +119,7 @@ To do this, you should configure proper CSV (`primer_name,primer_seq`) file cont
 
 2. Order of primers is crucial, so keep order exactly as in this example file.
 
-#### Depencenies
+#### Dependencies
 
 This script depends on [seqkit](https://github.com/shenwei356/seqkit).
 
@@ -121,18 +144,18 @@ This script depends on [seqkit](https://github.com/shenwei356/seqkit).
  ```
 
 #### Usage:
-```
-  bash make-amplicons.sh <-p primers_csv> <-g genome_fasta> [-o outout_fasta] [-s seqkit_path]
+```console
+  bash make-amplicons.sh <-p primers_csv> <-g genome_fasta> [-o output_fasta] [-s seqkit_path]
 ```
 #### Examples:
 
 Case 1. `seqkit` is in PATH
-```
+```console
   bash make-amplicons.sh -p my_primers.csv -g Wuhan-Hu-1-compele-genome.fasta \
   -o amplicons-db/my_amplicons.fasta
 ```
 Case 2. `seqkit` is not in PATH
-```
+```console
   bash make-amplicons.sh -p my_primers.csv -g Wuhan-Hu-1-compele-genome.fasta \
   -o amplicons-db/my_amplicons.fasta -s /home/me/seqkit/bin/seqkit
 ```
@@ -141,7 +164,7 @@ Case 2. `seqkit` is not in PATH
 
 While working, "kromsatel" creates temporary files and writes queries for "blastn" to them. If you terminate "kromsatel" or if it exits with error, they might be left after run.
 
-Under Unix-like systems, these files are stored in `/tmp`, and under Windows -- in the working directory.
+Under Unix-like systems, these files are stored in `/tmp`, and under Windows -- in user's temporary directory.
 
 Naming schema of these files is following:
 
