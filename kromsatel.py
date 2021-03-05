@@ -481,26 +481,25 @@ def get_aligned_spans(curr_alns):
     curr_alns_minor_sorted = curr_alns[curr_alns['major'] == False]\
         .sort_values(by='length', ascending=False)
 
-    merged_alns = curr_alns_major_sorted.append(curr_alns_minor_sorted)
-
     # List of result spans
     aligned_spans = list()
 
     does_overlap = lambda span: (span[0] <= aln['qstart']-1 <= span[1])\
                              or (span[0] <= aln['qend']     <= span[1])
 
-    for i in range(merged_alns.shape[0]):
-        aln = merged_alns.iloc[i, [6, 7]] # get current alignment
+    for aln_collection in (curr_alns_major_sorted, curr_alns_minor_sorted):
+        for i in range(aln_collection.shape[0]):
+            aln = aln_collection.iloc[i, [6, 7]] # get current alignment
 
-        overlap_result = functools.reduce(operator.or_,
-            map(does_overlap, aligned_spans),
-            False
-        )
+            overlap_result = functools.reduce(operator.or_,
+                map(does_overlap, aligned_spans),
+                False
+            )
 
-        if not overlap_result:
-            aligned_spans.append( (aln['qstart']-1, aln['qend']) )
-        # end if
-    # end for
+            if not overlap_result:
+                aligned_spans.append( (aln['qstart']-1, aln['qend']) )
+            # end if
+        # end for
 
     return aligned_spans
 # end def get_aligned_spans
