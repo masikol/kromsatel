@@ -58,6 +58,7 @@ import re
 import getopt
 import subprocess as sp
 
+import functools
 import operator
 import io
 
@@ -525,23 +526,19 @@ def get_aligned_spans(curr_alns):
     # List of result spans
     aligned_spans = list()
 
-    # We will use this array to make sure that one span
-    #   is included in result ("shredded") reads multiple times.
-    cov_array = np.zeros(curr_alns.iloc[0,:]['qlen'], dtype=np.uint8)
+    do_overlaps = lambda span: span[0] <= aln['qstart']-1 <= span[1]\
+                            or span[0] <= aln['qend']     <= span[1]
 
-    # Find spans
-    for aln_collenstion in chain_of_alns:
+    for aln_collection in chain_of_alns:
+        for i in range(aln_collection.shape[0]):
+            aln = aln_collection.iloc[i, [6, 7]] # get current alignment
 
-        for i in range(aln_collenstion.shape[0]):
+            overlap_result = functools.reduce(operator.or_,
+                map(do_overlaps, aligned_spans),
+                False
+            )
 
-            aln = aln_collenstion.iloc[i, :] # get current alignment
-            buff_cov_array = np.copy(cov_array) # copy current `cov_array` to buffer
-            np.add.at(buff_cov_array, range(aln['qstart']-1, aln['qend']), 1) # add 1-s to find overlaps
-
-            # If it is a 2 (number two) somewhere, we have overlap and do not need this span.
-            # if no 2 emerged, keep this span and add it to `aligned_spans`
-            if not any(buff_cov_array > 1):
-                np.add.at(cov_array, range(aln['qstart']-1, aln['qend']), 1) # update cov_array
+            if not overlap_result:
                 aligned_spans.append( (aln['qstart']-1, aln['qend']) )
             # end if
         # end for
@@ -566,6 +563,22 @@ def rm_query_file(query_fpath):
 # end rm_query_file
 
 
+def _get_bar_len():
+    # Function returns length of status bar.
+    # Firstly it tries to obtain "adaptive" bar length from terminal width.
+    # It might fail if output is redirected somewhere, e.g. with `tee`.
+    # If obtaining "adaptive" length fails, bar length will be set to some low value.
+    # Return type: int.
+    try:
+        bar_len = int(os.get_terminal_size().columns * 0.40)
+    except OSError:
+        # Default low value
+        bar_len = 40
+    # end try
+    return bar_len
+# end _get_bar_len
+
+
 def clean_and_shred(fq_fpath, db_fpath, n_thr, packet_size):
     # Function organizes analysis of dataframe of alignment data.
     #
@@ -588,7 +601,7 @@ def clean_and_shred(fq_fpath, db_fpath, n_thr, packet_size):
 
     # Count reads and configure variables for printing status bar
     nreads = sum(1 for _ in OPEN_FUNCS[int(fq_fpath.endswith('.gz'))](fq_fpath)) // 4
-    bar_len = int(os.get_terminal_size().columns * 0.40)
+    bar_len = _get_bar_len()
     next_print_num = int(nreads * 0.01)
     inc_num = next_print_num
     i = 0
@@ -629,7 +642,7 @@ def clean_and_shred(fq_fpath, db_fpath, n_thr, packet_size):
 
                 # Update status bar
                 if i > next_print_num:
-                    bar_len = int(os.get_terminal_size().columns * 0.40)
+                    bar_len = _get_bar_len()
                     done_ratio = i / nreads
                     sys.stdout.write('\r{} - [{}>{}] {}/{} ({}%)'.format(getwt(),
                         '='*int(bar_len*done_ratio),
