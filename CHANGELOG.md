@@ -1,6 +1,6 @@
 # kromsatel changelog
 
-## 2021-03-05 afternoon edition
+## 2021-03-05 edition
 
 - Improved performance ~ 2.3 times.
 - Enabled parallel read processing (`-t`).
