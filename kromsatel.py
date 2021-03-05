@@ -110,8 +110,10 @@ def handle_cl_args():
 
     # Get arguments
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hvd:t:p:', ['help', 'version',
-                                                                'db=', 'threads=', 'packet-size=']
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hvd:t:p:',
+            ['help', 'version',
+            'db=', 'threads=', 'chunk-size=',
+            'am=', 'im=']
         )
     except getopt.GetoptError as opt_err:
         print( str(opt_err) )
@@ -144,9 +146,14 @@ def handle_cl_args():
         platf_depend_exit(0)
     # end if
 
-    db_fpath = None
-    n_thr = 1
-    packet_size = 1000
+    args = {
+        'fq_fpaths': fq_fpaths,
+        'db_fpath': None,
+        'n_thr': 1,
+        'chunk_size': 1000,
+        'min_len_major': 100,
+        'min_len_minor': 25,
+    }
 
     # Handle options
     for opt, arg in opts:
@@ -156,60 +163,71 @@ def handle_cl_args():
                 print('Error: database `{}` does not exist!'.format(arg))
                 platf_depend_exit(1)
             else:
-                db_fpath = os.path.abspath(arg)
+                args['db_fpath'] = os.path.abspath(arg)
             # end if
 
-        # Handle packet size
-        elif opt in ("-p", "--packet-size"):
+        # Handle chunk size
+        elif opt in ("-p", "--chunk-size"):
             try:
-                packet_size = int(arg)
-                if packet_size <= 0:
+                chunk_size = int(arg)
+                if chunk_size <= 0:
                     raise ValueError
                 # end if
             except ValueError:
-                print("Error: packet_size (-p option) must be positive integer number")
+                print("Error: chunk_size (-p option) must be positive integer number")
                 platf_depend_exit(1)
             # end try
 
         # Handle number of threads
         elif opt in ('-t', '--threads'):
             try:
-                n_thr = int(arg)
-                if n_thr < 1:
+                args['n_thr'] = int(arg)
+                if args['n_thr'] < 1:
                     raise ValueError
                 # end if
             except ValueError:
-                print('Error: number of threads must be positive integer number!')
+                print('Error: number of threads must be integer number > 0!')
                 print(' And here is your value: `{}`'.format(arg))
                 sys.exit(1)
             # end try
-            if n_thr > len(os.sched_getaffinity(0)):
+            if args['n_thr'] > len(os.sched_getaffinity(0)):
                 print('''\nWarning! You have specified {} threads to use
-      although {} are available.'''.format(n_thr, len(os.sched_getaffinity(0))))
-                error = True
-                while error:
-                    reply = input('''\nPress ENTER to switch to {} threads,
-      or enter 'c' to continue with {} threads,
-      or enter 'q' to exit:>>'''.format(len(os.sched_getaffinity(0)), n_thr))
-                    if reply in ('', 'c', 'q'):
-                        error = False
-                        if reply == '':
-                            n_thr = len(os.sched_getaffinity(0))
-                            print('\nNumber of threads switched to {}\n'.format(n_thr))
-                        elif reply == 'c':
-                            pass
-                        elif reply == 'q':
-                            sys.exit(0)
-                        # end if
-                    else:
-                        print('\nInvalid reply!\n')
-                    # end if
-                # end while
+      although {} are available.'''.format(args['n_thr'], len(os.sched_getaffinity(0))))
+                args['n_thr'] = len(os.sched_getaffinity(0))
+                print('Switched to {} threads.'.format(args['n_thr']))
             # end if
+
+        # Handle min major read length
+        elif opt == '--am':
+            try:
+                min_len_major = int(arg)
+                if min_len_major < 1:
+                    raise ValueError
+                # end if
+            except ValueError:
+                print('Invalid minimum major read length passed with option `{}`: {}'\
+                    .format(opt, arg))
+                print('It must be integer number > 0.')
+                platf_depend_exit(1)
+            # end try
+
+        # Handle min minor read length
+        elif opt == '--im':
+            try:
+                min_len_minor = int(arg)
+                if min_len_minor < 1:
+                    raise ValueError
+                # end if
+            except ValueError:
+                print('Invalid minimum minor read length passed with option `{}`: {}'\
+                    .format(opt, arg))
+                print('It must be integer number > 0.')
+                platf_depend_exit(1)
+            # end try
         # end if
     # end for
 
-    return fq_fpaths, db_fpath, n_thr, packet_size
+    return args
 # end def handle_cl_args
 
 
@@ -336,21 +354,21 @@ def make_outfpath(fq_fpath):
 # end def make_outfpath
 
 
-def form_packet(fastq_file, packet_size, fmt_func):
+def form_chunk(fastq_file, chunk_size, fmt_func):
     """
-    Function reads lines from 'fastq_file' and composes a packet of 'packet_size' sequences.
+    Function reads lines from 'fastq_file' and composes a chunk of 'chunk_size' sequences.
 
     :param fastq_file: file instance from which to read;
     :type fastq_file: _io.TextIOWrapper or gzip.File;
-    :param packet_size: number of sequences to retrive from file;
-    :type packet_size: int;
+    :param chunk_size: number of sequences to retrive from file;
+    :type chunk_size: int;
     :param fmt_func: formating function from FORMMATING_FUNCS tuple;
     """
 
     eof = False
-    fq_packet = dict()
+    fq_chunk = dict()
 
-    for _ in range(packet_size):
+    for _ in range(chunk_size):
 
         read_id = fmt_func(fastq_file.readline())
 
@@ -359,7 +377,7 @@ def form_packet(fastq_file, packet_size, fmt_func):
             break
         # end if
 
-        fq_packet[read_id] = {
+        fq_chunk[read_id] = {
             'seq_id': read_id.partition(' ')[0][1:],
             'seq': fmt_func(fastq_file.readline()),
             'cmnt': fmt_func(fastq_file.readline()),
@@ -367,11 +385,11 @@ def form_packet(fastq_file, packet_size, fmt_func):
         }
     # end for
 
-    return fq_packet, eof
-# end def form_packet
+    return fq_chunk, eof
+# end def form_chunk
 
 
-def fastq_packets(fq_fpath, packet_size):
+def fastq_chunks(fq_fpath, chunk_size):
 
     how_to_open = OPEN_FUNCS[ fq_fpath.endswith('.gz') ]
     fmt_func = FORMATTING_FUNCS[ fq_fpath.endswith('.gz') ]
@@ -383,32 +401,32 @@ def fastq_packets(fq_fpath, packet_size):
 
         while not eof:
 
-            fq_packet, eof = form_packet(fastq_file, packet_size, fmt_func)
+            fq_chunk, eof = form_chunk(fastq_file, chunk_size, fmt_func)
 
-            if len(fq_packet) == 0:
+            if len(fq_chunk) == 0:
                 return
             # end if
 
-            yield fq_packet
+            yield fq_chunk
 
             if eof:
                 return
             # end if
         # end while
     # end with
-# end def fastq_packets
+# end def fastq_chunks
 
 
-def write_fastq2fasta(fq_packet, query_fpath):
-    # Function writes fastq-formatted packet to fasta file.
+def write_fastq2fasta(fq_chunk, query_fpath):
+    # Function writes fastq-formatted chunk to fasta file.
     #
-    # :param fq_packet: dictionary of fastq-records;
-    # :type fq_packet: dict<str: dict<str: str>>;
+    # :param fq_chunk: dictionary of fastq-records;
+    # :type fq_chunk: dict<str: dict<str: str>>;
     # :param query_fpath: path to query fasta file;
     # :type query_fpath: str;
 
     with open(query_fpath, 'w') as query_file:
-        for fq_record in fq_packet.values():
+        for fq_record in fq_chunk.values():
             query_file.write('>{}\n{}\n'.format(fq_record['seq_id'],fq_record['seq']))
     # end with
 # end def
@@ -429,46 +447,6 @@ def write_fastq_record(fq_record, outfile):
 # end def write_fastq_record
 
 
-# Positions in BLAST+ are 1-based
-MAX_EDGE_OFFSET = 10
-
-
-def set_touch_start(row):
-    # Function to be used with pandas.DataFrame.apply function.
-    # It adds a column indicating if the alignment in a particular row
-    #   "touches" 5'-end of subject sequence.
-    #
-    # :param row: row of dataframe to which this function if applied;
-    # :type row: pandas.Series;
-
-    if row['sstrand']:
-        row['touch_start'] = row['sstart'] < 1 + MAX_EDGE_OFFSET
-    else:
-        row['touch_start'] = row['sstart'] > row['slen'] - MAX_EDGE_OFFSET
-    # end if
-
-    return row
-# end def get_touch_start
-
-
-def set_touch_end(row):
-    # Function to be used with pandas.DataFrame.apply function.
-    # It adds a column indicating if the alignment in a particular row
-    #   "touches" 3'-end of subject sequence.
-    #
-    # :param row: row of dataframe to which this function if applied;
-    # :type row: pandas.Series;
-
-    if row['sstrand']:
-        row['touch_end'] = row['send'] > row['slen'] - MAX_EDGE_OFFSET
-    else:
-        row['touch_end'] = row['send'] < 1 + MAX_EDGE_OFFSET
-    # end if
-
-    return row
-# end def get_touch_start
-
-
 def set_major(row):
     # Function to be used with pandas.DataFrame.apply function.
     # It adds a column indicating if `sseqid` of the alignment
@@ -485,7 +463,7 @@ def set_major(row):
 # end def get_touch_start
 
 
-def get_aligned_spans(curr_alns):
+def get_aligned_spans(curr_alns, min_len_major, min_len_minor):
     # Function analyses obtained alignments and find "spans" -- subsequences
     #   into which input read should be "shredded".
     # These spans should not overlap
@@ -498,50 +476,39 @@ def get_aligned_spans(curr_alns):
         return []
     # end if
 
-    # Add columns indicating if alignments "touch" 5'- and 3'-ends of subjects
     # And a column indicating if subject sequence is a major fragment
-    curr_alns.insert(loc=curr_alns.shape[1], column='touch_start', value=np.repeat(None, curr_alns.shape[0]))
-    curr_alns.insert(loc=curr_alns.shape[1], column='touch_end', value=np.repeat(None, curr_alns.shape[0]))
-    curr_alns.insert(loc=curr_alns.shape[1], column='major', value=np.repeat(False, curr_alns.shape[0]))
-
-    # Fill these columns
-    curr_alns = curr_alns.apply(set_touch_start, axis=1)
-    curr_alns = curr_alns.apply(set_touch_end, axis=1)
+    curr_alns.insert(loc=curr_alns.shape[1],
+        column='major',
+        value=np.repeat(False, curr_alns.shape[0])
+    )
     curr_alns = curr_alns.apply(set_major, axis=1)
 
-    # Extract "touching" alignments
-    full_span_alns = curr_alns[(curr_alns['touch_start']) & (curr_alns['touch_end'])] # from 5' to 3'
-    one_side_alns = curr_alns[operator.xor(curr_alns['touch_start'], curr_alns['touch_end'])] # from 5' of from 3' (with a break somewhere in between)
+    curr_alns_major_sorted = curr_alns[
+        (curr_alns['major'] == True) & (curr_alns['length'] >= min_len_major)]\
+        .sort_values(by='length', ascending=False)
+    curr_alns_minor_sorted = curr_alns[
+        (curr_alns['major'] == False) & (curr_alns['length'] >= min_len_minor)]\
+        .sort_values(by='length', ascending=False)
 
-    chain_of_alns = (
-        full_span_alns[full_span_alns['major'] == True], # firstly check major full alignments
-        one_side_alns[one_side_alns['major'] == True], # then major but not full
-        full_span_alns[full_span_alns['major'] == False], # then minor full
-        one_side_alns[one_side_alns['major'] == False], # and finally minor but not full
-    )
-
-    del full_span_alns
-    del one_side_alns
+    merged_alns = curr_alns_major_sorted.append(curr_alns_minor_sorted)
 
     # List of result spans
     aligned_spans = list()
 
-    do_overlaps = lambda span: span[0] <= aln['qstart']-1 <= span[1]\
+    does_overlap = lambda span: span[0] <= aln['qstart']-1 <= span[1]\
                             or span[0] <= aln['qend']     <= span[1]
 
-    for aln_collection in chain_of_alns:
-        for i in range(aln_collection.shape[0]):
-            aln = aln_collection.iloc[i, [6, 7]] # get current alignment
+    for i in range(merged_alns.shape[0]):
+        aln = merged_alns.iloc[i, [6, 7]] # get current alignment
 
-            overlap_result = functools.reduce(operator.or_,
-                map(do_overlaps, aligned_spans),
-                False
-            )
+        overlap_result = functools.reduce(operator.or_,
+            map(does_overlap, aligned_spans),
+            False
+        )
 
-            if not overlap_result:
-                aligned_spans.append( (aln['qstart']-1, aln['qend']) )
-            # end if
-        # end for
+        if not overlap_result:
+            aligned_spans.append( (aln['qstart']-1, aln['qend']) )
+        # end if
     # end for
 
     return aligned_spans
@@ -579,7 +546,7 @@ def _get_bar_len():
 # end _get_bar_len
 
 
-def clean_and_shred(fq_fpath, db_fpath, n_thr, packet_size):
+def clean_and_shred(fq_fpath, db_fpath, n_thr, chunk_size, min_len_major, min_len_minor):
     # Function organizes analysis of dataframe of alignment data.
     #
     # :param aln_df: dataframe containing alignment data to be analysed;
@@ -611,17 +578,17 @@ def clean_and_shred(fq_fpath, db_fpath, n_thr, packet_size):
 
     with open(outfpath, 'w') as outfile:
 
-        for fq_packet in fastq_packets(fq_fpath, packet_size):
+        for fq_chunk in fastq_chunks(fq_fpath, chunk_size):
 
             # Convert input fastq file to fasta format in order to pass the latter to blastn
-            write_fastq2fasta(fq_packet, query_fpath)
+            write_fastq2fasta(fq_chunk, query_fpath)
             # Align and obtain dataframe containing data about alignments
             aln_df = str2df(disco_align(blast_cmd))
 
-            for _, fq_record in fq_packet.items():
+            for _, fq_record in fq_chunk.items():
                 # Select rows containing alignments of current read
                 curr_alns = aln_df[aln_df['qseqid'] == fq_record['seq_id']]
-                aligned_spans = get_aligned_spans(curr_alns)
+                aligned_spans = get_aligned_spans(curr_alns, min_len_major, min_len_minor)
 
                 # Write spans
                 for aln_span in aligned_spans:
@@ -667,18 +634,24 @@ def clean_and_shred(fq_fpath, db_fpath, n_thr, packet_size):
 
 def main():
     # Handle command line arguments
-    fq_fpaths, db_fpath, n_thr, packet_size = handle_cl_args()
+    args = handle_cl_args()
 
     # Check if blastn is installed
     check_blastn()
 
     print('{} - Start.'.format(getwt()))
 
-    for fq_fpath in fq_fpaths:
+    for fq_fpath in args['fq_fpaths']:
         print('{} - Processing file `{}`'.format(getwt(), fq_fpath))
 
         # Run cleaning
-        outfpath = clean_and_shred(fq_fpath, db_fpath, n_thr, packet_size)
+        outfpath = clean_and_shred(fq_fpath,
+            args['db_fpath'],
+            args['n_thr'],
+            args['chunk_size'],
+            args['min_len_major'],
+            args['min_len_minor'],
+        )
 
         print('{} - File `{}` is processed.'.format(getwt(), fq_fpath))
         print('Output file: `{}`'.format(outfpath))
