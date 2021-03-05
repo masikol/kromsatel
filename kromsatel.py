@@ -283,7 +283,7 @@ def configure_blastn_cmd(query_fpath, db_fpath, n_thr):
 # end def configure_blastn_cmd
 
 
-def disco_align(blast_cmd):
+def blast_align(blast_cmd):
     # Function alignes reads against fragments using Discontiguous Megablast.
     #
     # :param blast_cmd: command to execute;
@@ -302,7 +302,7 @@ def disco_align(blast_cmd):
     # end if
 
     return stdout_stderr[0].decode('utf-8')
-# end def disco_align
+# end def blast_align
 
 
 def str2df(align_result_str):
@@ -463,7 +463,7 @@ def set_major(row):
 # end def get_touch_start
 
 
-def get_aligned_spans(curr_alns, min_len_major, min_len_minor):
+def get_aligned_spans(curr_alns):
     # Function analyses obtained alignments and find "spans" -- subsequences
     #   into which input read should be "shredded".
     # These spans should not overlap
@@ -473,21 +473,12 @@ def get_aligned_spans(curr_alns, min_len_major, min_len_minor):
 
     # If there are no alignments -- just return empty list.
     if curr_alns.empty:
-        return []
+        return tuple()
     # end if
 
-    # And a column indicating if subject sequence is a major fragment
-    curr_alns.insert(loc=curr_alns.shape[1],
-        column='major',
-        value=np.repeat(False, curr_alns.shape[0])
-    )
-    curr_alns = curr_alns.apply(set_major, axis=1)
-
-    curr_alns_major_sorted = curr_alns[
-        (curr_alns['major'] == True) & (curr_alns['length'] >= min_len_major)]\
+    curr_alns_major_sorted = curr_alns[curr_alns['major'] == True]\
         .sort_values(by='length', ascending=False)
-    curr_alns_minor_sorted = curr_alns[
-        (curr_alns['major'] == False) & (curr_alns['length'] >= min_len_minor)]\
+    curr_alns_minor_sorted = curr_alns[curr_alns['major'] == False]\
         .sort_values(by='length', ascending=False)
 
     merged_alns = curr_alns_major_sorted.append(curr_alns_minor_sorted)
@@ -495,8 +486,8 @@ def get_aligned_spans(curr_alns, min_len_major, min_len_minor):
     # List of result spans
     aligned_spans = list()
 
-    does_overlap = lambda span: span[0] <= aln['qstart']-1 <= span[1]\
-                            or span[0] <= aln['qend']     <= span[1]
+    does_overlap = lambda span: (span[0] <= aln['qstart']-1 <= span[1])\
+                             or (span[0] <= aln['qend']     <= span[1])
 
     for i in range(merged_alns.shape[0]):
         aln = merged_alns.iloc[i, [6, 7]] # get current alignment
@@ -546,6 +537,28 @@ def _get_bar_len():
 # end _get_bar_len
 
 
+def add_major_col(aln_df):
+    # And a column indicating if subject sequence is a major fragment
+    aln_df.insert(loc=aln_df.shape[1],
+        column='major',
+        value=np.repeat(False, aln_df.shape[0])
+    )
+    aln_df = aln_df.apply(set_major, axis=1)
+
+    return aln_df
+# end def add_major_col
+
+
+def filter_short_alns(aln_df, min_len_major, min_len_minor):
+
+    aln_df = aln_df[
+        ((aln_df['major'] == True)  & (aln_df['length'] >= min_len_major))\
+      | ((aln_df['major'] == False) & (aln_df['length'] >= min_len_minor))
+    ]
+    return aln_df
+# end def filter_short_alns
+
+
 def clean_and_shred(fq_fpath, db_fpath, n_thr, chunk_size, min_len_major, min_len_minor):
     # Function organizes analysis of dataframe of alignment data.
     #
@@ -583,12 +596,18 @@ def clean_and_shred(fq_fpath, db_fpath, n_thr, chunk_size, min_len_major, min_le
             # Convert input fastq file to fasta format in order to pass the latter to blastn
             write_fastq2fasta(fq_chunk, query_fpath)
             # Align and obtain dataframe containing data about alignments
-            aln_df = str2df(disco_align(blast_cmd))
+            aln_df = str2df(blast_align(blast_cmd))
+            # Add 'major' column and filter short alignments
+            aln_df = filter_short_alns(
+                add_major_col(aln_df),
+                min_len_major,
+                min_len_minor
+            )
 
             for _, fq_record in fq_chunk.items():
                 # Select rows containing alignments of current read
                 curr_alns = aln_df[aln_df['qseqid'] == fq_record['seq_id']]
-                aligned_spans = get_aligned_spans(curr_alns, min_len_major, min_len_minor)
+                aligned_spans = get_aligned_spans(curr_alns)
 
                 # Write spans
                 for aln_span in aligned_spans:
@@ -650,7 +669,7 @@ def main():
             args['n_thr'],
             args['chunk_size'],
             args['min_len_major'],
-            args['min_len_minor'],
+            args['min_len_minor']
         )
 
         print('{} - File `{}` is processed.'.format(getwt(), fq_fpath))
