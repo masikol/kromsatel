@@ -105,7 +105,7 @@ Run kromsatel
 
 ### Removing primer sequences from reads
 
-kromsatel can either remove primer sequences from reads or do not remove. Accordingly, there are two "classes" of fasta files of amplicons: without primers (e.g. `amplicons-fasta/nCov-2019_amplicons.fasta`) and with primers (e.g. `amplicons-fasta/nCov-2019_amplicons_with-primers.fasta`). If you want to remove primers from sequences being processed with `kromsatel.py`, you should create your BLAST database from the first "class" of fasta files. Accordingly, if your BLAST database contain sequences from `_with-primers` fasta file, `kromsatel.py` will not remove primer sequences from reads.
+kromsatel can either remove primer sequences from reads or do not remove. Accordingly, there are two "classes" of fasta files of amplicons: without primers (e.g. `amplicons-fasta/nCov-2019_amplicons.fasta`) and with primers (e.g. `amplicons-fasta/nCov-2019_amplicons_with-primers.fasta`). If you want to remove primers from sequences being processed with `kromsatel.py`, you should create your BLAST database from the first "class" of fasta files. Accordingly, if your BLAST database contains sequences from `_with-primers` fasta file, `kromsatel.py` will not remove primer sequences from reads.
 
 ### Output file
 
