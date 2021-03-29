@@ -40,11 +40,15 @@ Brief description of the algorithm:
 
 #### Get started -- create the database
 
-To create database of amplicons, do the following:
+To create database of amplicons, run script `db-scripts/make-db.sh` in the following way:
 
-```console
-cd amplicons-db
-makeblastdb -in nCoV-2019_amplicons.fasta -dbtype nucl -parse_seqids
+```
+bash db-scripts/make-db.sh <amplicons_fasta> <output_database_dir>
+
+```
+For example:
+```
+bash db-scripts/make-db.sh nCoV-2019_amplicons.fasta nCoV-2019_database
 ```
 
 You can use other set of amplicons, for example the alternative one: `nCoV-2019-alt_amplicons.fasta` (it is generated using [this](https://github.com/ItokawaK/Alt_nCov2019_primers) primer set). You can also create your own amplicons for your primers using script `make-amplicons.sh` (see section "Creating your own amplicons" below).
@@ -55,8 +59,8 @@ When the database is created, you can proceed with cleaning.
 
 #### Basic usage
 
-```console
-./kromsatel.py <YOUR_READS> -d amplicons-db/nCoV-2019_amplicons.fasta 
+```
+./kromsatel.py <YOUR_READS> -d <DATABASE_PATH>
 ```
 
 #### Options
@@ -84,11 +88,24 @@ When the database is created, you can proceed with cleaning.
     Default: 1000 reads.
 ```
 
-
 #### Example
-```console
-./kromsatel.py corona_reads.fastq -d amplicons-db/nCoV-2019_amplicons.fasta -t 4 --am 150
 ```
+./kromsatel.py corona_reads.fastq -d nCoV-2019_database/nCoV-2019_amplicons -t 4 --am 150
+```
+
+And two commands together, for clarity:
+
+Create database:
+
+`bash db-scripts/make-db.sh nCoV-2019_amplicons.fasta nCoV-2019_database`
+
+Run kromsatel
+
+`./kromsatel.py corona_reads.fastq -d nCoV-2019_database/nCoV-2019_amplicons`
+
+### Removing primer sequences from reads
+
+kromsatel can either remove primer sequences from reads or do not remove. Accordingly, there are two "classes" of fasta files of amplicons: without primers (e.g. `amplicons-fasta/nCov-2019_amplicons.fasta`) and with primers (e.g. `amplicons-fasta/nCov-2019_amplicons_with-primers.fasta`). If you want to remove primers from sequences being processed with `kromsatel.py`, you should create your BLAST database from the first "class" of fasta files. Accordingly, if your BLAST database contain sequences from `_with-primers` fasta file, `kromsatel.py` will not remove primer sequences from reads.
 
 ### Output file
 
@@ -111,7 +128,7 @@ Example of read name in an output file:
 
 ### Creating your own amplicons
 
-You can create your own amplicons for your primers using script `make-amplicons.sh`.
+You can create your own amplicons for your primers using script `db-scripts/make-amplicons.sh`.
 
 To do this, you should configure proper CSV (`primer_name,primer_seq`) file containing your primers. You can use file `primers/nCov-2019_primers.csv` as example. "Proper" means the following:
 
@@ -130,34 +147,43 @@ This script depends on [seqkit](https://github.com/shenwei356/seqkit).
 2. Genome (in fasta format) of damned coronavirus (I use this one: [NC_045512](https://www.ncbi.nlm.nih.gov/nuccore/NC_045512)).
 
 #### Output:
-1. Fasta file containing amplicons and ready for database creation, just like `amplicons-db/nCoV-2019_amplicons.fasta`.
+
+Script "make-amplicons.sh" outputs two fasta files containing amplicons:
+
+1. File containing amplicons whith primers sequences removed, e.g. `nCoV-2019_amplicons.fasta`.
+
+2. File containing amplicons where primers sequences are not removed, e.g. `nCoV-2019_amplicons_with-primers.fasta`.
+
+Any of these output files are ready for database creation, just like `amplicons-fasta/nCoV-2019_amplicons.fasta`.
 
 #### Options:
 ```
  -h -- print help message and exit;
  -p -- CSV file with primers  (mandatory);
  -g -- fasta file with genome (mandatory);
- -o -- output fasta file with amplicons;
-       default value: ./corona-amplicons.fasta
+ -o -- prefix of output fasta files;
+       default value: ./my-amplicons
  -s -- path to seqkit executable
        (if seqkit is in your PATH, just omit this option);
+ -i -- minimum length of a minor amplicon to output;
+       default value: 25.
  ```
 
 #### Usage:
-```console
-  bash make-amplicons.sh <-p primers_csv> <-g genome_fasta> [-o output_fasta] [-s seqkit_path]
+```
+  bash make-amplicons.sh <-p primers_csv> <-g genome_fasta> [-o STR] [-s STR] [-i INT]
 ```
 #### Examples:
 
 Case 1. `seqkit` is in PATH
-```console
+```
   bash make-amplicons.sh -p my_primers.csv -g Wuhan-Hu-1-compele-genome.fasta \
-  -o amplicons-db/my_amplicons.fasta
+  -o amplicons-fasta/my_amplicons.fasta
 ```
 Case 2. `seqkit` is not in PATH
-```console
+```
   bash make-amplicons.sh -p my_primers.csv -g Wuhan-Hu-1-compele-genome.fasta \
-  -o amplicons-db/my_amplicons.fasta -s /home/me/seqkit/bin/seqkit
+  -o amplicons-fasta/my_amplicons.fasta -s /home/me/seqkit/bin/seqkit
 ```
 
 ### Kromsatel temporary files
