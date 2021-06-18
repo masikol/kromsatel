@@ -88,7 +88,7 @@ When the database is created, you can proceed with cleaning.
     Default: 1000 reads.
 ```
 
-#### Example
+#### Examples
 ```
 ./kromsatel.py corona_reads.fastq -d nCoV-2019_database/nCoV-2019_amplicons -t 4 --am 150
 ```
@@ -102,6 +102,14 @@ Create database:
 Run kromsatel
 
 `./kromsatel.py corona_reads.fastq -d nCoV-2019_database/nCoV-2019_amplicons`
+
+You can pass multiple fastq files to kromsatel, like this:
+
+`./kromsatel.py corona_reads_1.fastq corona_reads_2.fastq -d nCoV-2019_database/nCoV-2019_amplicons`
+
+Or you can use wildcards (this will process all `.fastq.gz` file in directory `reads_dir`):
+
+`./kromsatel.py reads_dir/*.fastq.gz -d nCoV-2019_database/nCoV-2019_amplicons`
 
 ### Removing primer sequences from reads
 
