@@ -2,6 +2,7 @@
 
 import io
 import os
+import re
 import sys
 import tempfile
 import operator
@@ -66,23 +67,90 @@ def _str2df(align_result_str):
 # end def _str2df
 
 
-def _set_major(row):
-    # Function to be used with pandas.DataFrame.apply function.
-    # It adds a column indicating if `sseqid` of the alignment
-    #   in a particular row is major fragment, i.e. it starts with 'A'.
-    #
-    # :param row: row of dataframe to which this function if applied;
-    # :type row: pandas.Series;
+def _rm_spuriously_major_alns(major_sorted_alns, minor_sorted_alns, primers_lengths):
 
-    if row['sseqid'][0] == 'A':
-        row['major'] = True
-    # end if
+    major_idx_to_rm = list()
 
-    return row
-# end def _set_major
+    # print()
+    # print(major_sorted_alns)
+    # print(minor_sorted_alns)
+
+    for i_major, major_aln in major_sorted_alns.iterrows():
+
+        # print(major_aln['sseqid'])
+
+        qstart = major_aln['qstart']
+        minor_alns_with_same_start = minor_sorted_alns[minor_sorted_alns['qstart'] == qstart]
+
+        if minor_alns_with_same_start.shape[0] != 0:
+
+            minor_aln = minor_alns_with_same_start.iloc[0]
+
+            forw_primer_amplicon_idx = int(minor_aln['sseqid'][1:])
+
+            reverse_primer_idx = int(2 * forw_primer_amplicon_idx - 1)
+            if minor_aln['sstrand'] == False:
+                reverse_primer_idx += 1
+            # end if
+            reverse_primer_len = primers_lengths[reverse_primer_idx]
+
+            len_diff = abs(major_aln['send'] - major_aln['sstart']) \
+                       - minor_aln['slen']
+                       # - max(minor_aln['slen'], minor_aln['length'])
+
+            # print(f'reverse_primer_idx = {reverse_primer_idx}')
+            # print(f'reverse_primer_len = {reverse_primer_len}')
+            # print(f'len_diff = {len_diff}')
+
+            if len_diff <= reverse_primer_len:
+                major_idx_to_rm.append(i_major)
+                # print('OH YEAH')
+                continue
+            # end if
+        # end if
+
+        qend = major_aln['qend']
+        minor_alns_with_same_end = minor_sorted_alns[minor_sorted_alns['qend'] == qend]
+
+        if minor_alns_with_same_end.shape[0] != 0:
+
+            minor_aln = minor_alns_with_same_end.iloc[0]
+
+            forw_primer_amplicon_idx = int(minor_aln['sseqid'][1:])
+
+            forward_primer_idx = int(2 * forw_primer_amplicon_idx)
+            if minor_aln['sstrand'] == False:
+                forward_primer_idx -= 1
+            # end if
+            forward_primer_len = primers_lengths[forward_primer_idx]
+
+            len_diff = abs(major_aln['send'] - major_aln['sstart']) \
+                       - minor_aln['slen']
+                       # - max(minor_aln['slen'], minor_aln['length'])
+
+            # print(f'forward_primer_idx = {forward_primer_idx}')
+            # print(f'forward_primer_len = {forward_primer_len}')
+            # print(f'len_diff = {len_diff}')
+
+            if len_diff <= forward_primer_len:
+                major_idx_to_rm.append(i_major)
+                # print('OH YEAH')
+                continue
+            # end if
+        # end if
+    # end for
+
+    major_sorted_alns.drop(major_idx_to_rm, inplace=True)
+
+    # print(major_sorted_alns)
+    # print('============================')
+    # print()
+
+    return major_sorted_alns
+# end def _rm_spuriously_major_alns
 
 
-def _get_aligned_spans(curr_alns):
+def _get_aligned_spans(curr_alns, primers_lengths):
     # Function analyses obtained alignments and find "spans" -- subsequences
     #   into which input read should be "shredded".
     # These spans should not overlap
@@ -99,6 +167,15 @@ def _get_aligned_spans(curr_alns):
         .sort_values(by='length', ascending=False)
     curr_alns_minor_sorted = curr_alns[curr_alns['major'] == False]\
         .sort_values(by='length', ascending=False)
+
+    # Check for spuriously major alignmenst if needed.
+    if not primers_lengths is None:
+        curr_alns_major_sorted = _rm_spuriously_major_alns(
+            curr_alns_major_sorted,
+            curr_alns_minor_sorted,
+            primers_lengths
+        )
+    # end if
 
     # List of result spans
     aligned_spans = list()
@@ -140,6 +217,22 @@ def _get_bar_len():
 # end _get_bar_len
 
 
+def _set_major(row):
+    # Function to be used with pandas.DataFrame.apply function.
+    # It adds a column indicating if `sseqid` of the alignment
+    #   in a particular row is major fragment, i.e. it starts with 'A'.
+    #
+    # :param row: row of dataframe to which this function if applied;
+    # :type row: pandas.Series;
+
+    if row['sseqid'][0] == 'A':
+        row['major'] = True
+    # end if
+
+    return row
+# end def _set_major
+
+
 def _add_major_col(aln_df):
     # And a column indicating if subject sequence is a major fragment
     # :param aln_df: data frame of alignments;
@@ -174,7 +267,15 @@ def _filter_short_alns(aln_df, min_len_major, min_len_minor):
 # end def _filter_short_alns
 
 
-def _shredder(fq_chunk, db_fpath, min_len_major, min_len_minor, nreads, inc_num, outfpath):
+def _shredder(
+    fq_chunk,
+    db_fpath,
+    min_len_major,
+    min_len_minor,
+    nreads,
+    inc_num,
+    outfpath,
+    primers_lengths):
 
     query_fpath = os.path.join(tempfile.gettempdir(),
         'kromsatel_query_{}.fasta'.format(os.getpid()))
@@ -197,7 +298,7 @@ def _shredder(fq_chunk, db_fpath, min_len_major, min_len_minor, nreads, inc_num,
     for _, fq_record in fq_chunk.items():
         # Select rows containing alignments of current read
         curr_alns = aln_df[aln_df['qseqid'] == fq_record['seq_id']]
-        aligned_spans = _get_aligned_spans(curr_alns)
+        aligned_spans = _get_aligned_spans(curr_alns, primers_lengths)
 
         # Write spans
         for aln_span in aligned_spans:
@@ -245,7 +346,14 @@ def _shredder(fq_chunk, db_fpath, min_len_major, min_len_minor, nreads, inc_num,
 # end def _shredder
 
 
-def clean_and_shred(fq_fpath, db_fpath, n_thr, chunk_size, min_len_major, min_len_minor):
+def clean_and_shred(
+    fq_fpath,
+    db_fpath,
+    n_thr,
+    chunk_size,
+    min_len_major,
+    min_len_minor,
+    primers_lengths):
     # Function organizes analysis of dataframe of alignment data.
     #
     # :param fq_fpath: path to input fastq file;
@@ -260,6 +368,9 @@ def clean_and_shred(fq_fpath, db_fpath, n_thr, chunk_size, min_len_major, min_le
     # :type min_len_major: int;
     # :param min_len_minor: minimum length of "minor" alignment;
     # :type min_len_minor: int;
+    # :param primers_lengths: tuple mapping primer's index to it's length.
+    #   In this tuple, index of a primer equals index of this primer in source .csv file;
+    # :type primers_lengths: tuple<int>;
     #
     # Returns path to output file.
 
@@ -284,7 +395,16 @@ def clean_and_shred(fq_fpath, db_fpath, n_thr, chunk_size, min_len_major, min_le
     # Proceed
     with mp.Pool(n_thr) as pool:
         pool.starmap(_shredder, (
-            (fq_chunk, db_fpath, min_len_major, min_len_minor, nreads, inc_num, outfpath)
+            (
+                fq_chunk,
+                db_fpath,
+                min_len_major,
+                min_len_minor,
+                nreads,
+                inc_num,
+                outfpath,
+                primers_lengths
+            )
             for fq_chunk in src.fastq.fastq_chunks(fq_fpath, chunk_size))
         )
     # end with

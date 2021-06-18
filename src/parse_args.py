@@ -13,10 +13,10 @@ def handle_cl_args():
 
     # Get arguments
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hvd:t:c:',
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hvd:t:c:p:',
             ['help', 'version',
             'db=', 'threads=', 'chunk-size=',
-            'am=', 'im=']
+            'am=', 'im=', 'primers-to-rm=']
         )
     except getopt.GetoptError as opt_err:
         print( str(opt_err) )
@@ -24,7 +24,7 @@ def handle_cl_args():
         platf_depend_exit(2)
     # end try
 
-    # Check and add fastq files:
+    # Check and add fastq files to list of files to process:
     fq_fpaths = list()
     is_fastq = lambda f: not re.match(r'.*\.f(ast)?q(\.gz)?$', f) is None
 
@@ -49,13 +49,14 @@ def handle_cl_args():
         platf_depend_exit(0)
     # end if
 
-    args = {
+    kromsatel_args = {
         'fq_fpaths': fq_fpaths, # paths to input files
         'db_fpath': None,       # path to database
         'n_thr': 1,             # number of threads
         'chunk_size': 1000,     # fastq chunk
         'min_len_major': 100,   # minimum length of "major" read
         'min_len_minor': 25,    # minimum length of "minor" read
+        'primers_fpath': None,    # path to file of primers to remove
     }
 
     # Handle options
@@ -66,14 +67,14 @@ def handle_cl_args():
                 print('Error: database `{}` does not exist!'.format(arg))
                 platf_depend_exit(1)
             else:
-                args['db_fpath'] = os.path.abspath(arg)
+                kromsatel_args['db_fpath'] = os.path.abspath(arg)
             # end if
 
         # Handle chunk size
         elif opt in ('-c', '--chunk-size'):
             try:
-                args['chunk_size'] = int(arg)
-                if args['chunk_size'] <= 0:
+                kromsatel_args['chunk_size'] = int(arg)
+                if kromsatel_args['chunk_size'] <= 0:
                     raise ValueError
                 # end if
             except ValueError:
@@ -85,8 +86,8 @@ def handle_cl_args():
         # Handle number of threads
         elif opt in ('-t', '--threads'):
             try:
-                args['n_thr'] = int(arg)
-                if args['n_thr'] < 1:
+                kromsatel_args['n_thr'] = int(arg)
+                if kromsatel_args['n_thr'] < 1:
                     raise ValueError
                 # end if
             except ValueError:
@@ -94,18 +95,18 @@ def handle_cl_args():
                 print(' And here is your value: `{}`'.format(arg))
                 platf_depend_exit(1)
             # end try
-            if args['n_thr'] > len(os.sched_getaffinity(0)):
+            if kromsatel_args['n_thr'] > len(os.sched_getaffinity(0)):
                 print('''\nWarning! You have specified {} threads to use
-      although {} are available.'''.format(args['n_thr'], len(os.sched_getaffinity(0))))
-                args['n_thr'] = len(os.sched_getaffinity(0))
-                print('Switched to {} threads.\n'.format(args['n_thr']))
+      although {} are available.'''.format(kromsatel_args['n_thr'], len(os.sched_getaffinity(0))))
+                kromsatel_args['n_thr'] = len(os.sched_getaffinity(0))
+                print('Switched to {} threads.\n'.format(kromsatel_args['n_thr']))
             # end if
 
         # Handle min major read length
         elif opt == '--am':
             try:
-                args['min_len_major'] = int(arg)
-                if args['min_len_major'] < 1:
+                kromsatel_args['min_len_major'] = int(arg)
+                if kromsatel_args['min_len_major'] < 1:
                     raise ValueError
                 # end if
             except ValueError:
@@ -118,8 +119,8 @@ def handle_cl_args():
         # Handle min minor read length
         elif opt == '--im':
             try:
-                args['min_len_minor'] = int(arg)
-                if args['min_len_minor'] < 1:
+                kromsatel_args['min_len_minor'] = int(arg)
+                if kromsatel_args['min_len_minor'] < 1:
                     raise ValueError
                 # end if
             except ValueError:
@@ -128,14 +129,28 @@ def handle_cl_args():
                 print('It must be integer number > 0.')
                 platf_depend_exit(1)
             # end try
+
+        # Handle primers path
+        elif opt in ('-p', '--primers-to-rm'):
+            if not os.path.exists(arg):
+                print('Error: file `{}` does not exist!'.format(arg))
+                platf_depend_exit(1)
+            # end if
+            if not arg.endswith('.csv'):
+                print('Error: primers file `{}` does not look like a csv file.'.format(arg))
+                print("If the problem is just with file't extention, \
+  please, change the extention to `.csv`.")
+                platf_depend_exit(1)
+            # end if
+            kromsatel_args['primers_fpath'] = arg
         # end if
     # end for
 
-    if args['db_fpath'] is None:
+    if kromsatel_args['db_fpath'] is None:
         print('Error: option `-d` is mandatory.')
         print('Type {} -h to see help message.'.format(sys.argv[0]))
         platf_depend_exit(1)
     # end if
 
-    return args
+    return kromsatel_args
 # end def handle_cl_args
