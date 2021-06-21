@@ -5,6 +5,7 @@ import src.shredding
 import src.parse_args
 import src.parse_primers
 from src.printing import getwt
+from src.platform import platf_depend_exit
 
 
 def main():
@@ -17,7 +18,12 @@ def main():
     # Parse primers lengths if needed
     primers_lengths = None
     if not args['primers_fpath'] is None:
-        primers_lengths = src.parse_primers.parse_primers_lengths(args['primers_fpath'])
+        try:
+            primers_lengths = src.parse_primers.parse_primers_lengths(args['primers_fpath'])
+        except ValueError as err:
+            print(str(err))
+            platf_depend_exit(1)
+        # end try
     # end if
 
     print('{} - Start.'.format(getwt()))
