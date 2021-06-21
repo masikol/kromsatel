@@ -72,9 +72,9 @@ def _rm_spuriously_major_alns(major_sorted_alns, minor_sorted_alns, primers_leng
     # Function removes spuriously "major" alignments from `major_sorted_alns`
     #   according to `minor_sorted_alns` and `primers_lengths` in order to
     #   remove primers sequences successfully.
-    # :param major_sorted_alns: ;
+    # :param major_sorted_alns: dataframe with "major" alignments;
     # :type major_sorted_alns: pandas.DataFrame;
-    # :param minor_sorted_alns: ;
+    # :param minor_sorted_alns: dataframe with "minor" alignments;
     # :type minor_sorted_alns: pandas.DataFrame;
     # :param primers_lengths: tuple mapping primer's index to it's length.
     #   In this tuple, index of a primer equals index of this primer in source .csv file;
@@ -113,7 +113,7 @@ def _rm_spuriously_major_alns(major_sorted_alns, minor_sorted_alns, primers_leng
             len_diff = abs(major_aln['send'] - major_aln['sstart']) \
                        - minor_aln['slen']
 
-            # It it is no longer than `minor_aln['slen']` + `reverse_primer_len`,
+            # If it is no longer than `minor_aln['slen'] + reverse_primer_len`,
             #   then we'll remove it
             if len_diff <= reverse_primer_len:
                 major_idx_to_rm.append(i_major)
@@ -147,7 +147,7 @@ def _rm_spuriously_major_alns(major_sorted_alns, minor_sorted_alns, primers_leng
             len_diff = abs(major_aln['send'] - major_aln['sstart']) \
                        - minor_aln['slen']
 
-            # It it is no longer than `minor_aln['slen']` + `reverse_primer_len`,
+            # If it is no longer than `minor_aln['slen'] + forward_primer_len`,
             #   then we'll remove it
             if len_diff <= forward_primer_len:
                 major_idx_to_rm.append(i_major)
@@ -189,12 +189,19 @@ def _get_aligned_spans_rm_primers(curr_alns, primers_lengths, min_len_minor):
     curr_alns_minor_sorted = curr_alns[curr_alns['major'] == False]\
         .sort_values(by='length', ascending=False)
 
-    # Remove spuriously "major" alignments
-    curr_alns_major_sorted = _rm_spuriously_major_alns(
-        curr_alns_major_sorted,
-        curr_alns_minor_sorted,
-        primers_lengths
-    )
+    try:
+        # Remove spuriously "major" alignments
+        curr_alns_major_sorted = _rm_spuriously_major_alns(
+            curr_alns_major_sorted,
+            curr_alns_minor_sorted,
+            primers_lengths
+        )
+    except ValueError as err:
+        print('Error: {}'.format(err))
+        print("The reason is probably that you've changed titles of the amplicons \
+in fasta file befor creating the database.")
+        platf_depend_exit(1)
+    # end try
 
     # List of result spans
     aligned_spans = list()
@@ -523,6 +530,7 @@ def clean_and_shred(
     sys.stdout.write('{} - [{}] 0/{} (0%)'.format(getwt(), ' '*bar_len, nreads))
     sys.stdout.flush()
 
+    # Initialize counters
     global INC_VAL
     global NEXT_PRINT_NUM
     INC_VAL = mp.Value('i', 0)
@@ -544,7 +552,6 @@ def clean_and_shred(
             for fq_chunk in src.fastq.fastq_chunks(fq_fpath, chunk_size))
         )
     # end with
-
 
     sys.stdout.write('\r{} - [{}] {}/{} (100%)\n'.format(getwt(),
         '='*bar_len, nreads, nreads))

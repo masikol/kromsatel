@@ -152,5 +152,40 @@ def handle_cl_args():
         platf_depend_exit(1)
     # end if
 
+    primers_specified = not kromsatel_args['primers_fpath'] is None
+    db_with_primers = 'with-primers' in kromsatel_args['db_fpath']
+
+    if primers_specified and db_with_primers:
+        print("Warning: you've specified option `-p`")
+        print('  but your BLAST database `{}` looks like it contains primers.'\
+            .format(kromsatel_args['db_fpath']))
+        print("See https://github.com/masikol/kromsatel/blob/main/README.md#removing-primer-sequences for details")
+        _ask_for_comfirmaton()
+    elif not primers_specified and not db_with_primers:
+        print("Warning: you haven't specified option `-p`")
+        print("  but your BLAST database `{}` looks like it doesn't contain primers."\
+            .format(kromsatel_args['db_fpath']))
+        print("See https://github.com/masikol/kromsatel/blob/main/README.md#removing-primer-sequences for details")
+        _ask_for_comfirmaton()
+    # end if
+
     return kromsatel_args
 # end def handle_cl_args
+
+
+def _ask_for_comfirmaton():
+
+    error = True
+    while error:
+        reply = input("""Press ENTER if you did it intentionally
+  or enter `q` to quit: >> """)
+        if reply == '':
+            error = False
+        elif reply.upper() == 'Q':
+            print('Exitting...')
+            sys.exit(0)
+        else:
+            print('Invalid reply: `{}`'.format(reply))
+        # end if
+    # end while
+# end def _ask_for_comfirmaton

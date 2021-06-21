@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-__version__ = '1.4.a'
+__version__ = '1.5.a'
 # Year, month, day
-__last_update_date__ = '2021-03-05'
+__last_update_date__ = '2021-06-21'
 __author__ = 'Maxim Sikolenko'
 
 # |===== Check python interpreter version. =====|

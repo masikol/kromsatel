@@ -1,5 +1,13 @@
 # kromsatel changelog
 
+## 2021-05-21 edition
+
+Improved algorithm for removing primer sequences. Although it slows kromsatel down twofold, it removes primers pretty well.
+
+See section ["Removing primer sequences"](https://github.com/masikol/kromsatel/blob/main/README.md#removing-primer-sequences) in README for details.
+
+Version change: `1.4.a --> 1.5.a`.
+
 ## 2021-03-29 edition
 
 Added possibility for kromsatel to remove primers sequences from reads being processed. To do that, you should create your BLAST database using fasta file of amplicons, in which primer sequences are removed. Those files do not contain phrase `_with-primers` in their names (see folder `amplicons-fasta/` in the repo).

@@ -32,7 +32,8 @@ def main():
         print('{} - Processing file `{}`'.format(getwt(), fq_fpath))
 
         # Run cleaning
-        outfpath = src.shredding.clean_and_shred(fq_fpath,
+        outfpath = src.shredding.clean_and_shred(
+            fq_fpath,
             args['db_fpath'],
             args['n_thr'],
             args['chunk_size'],
