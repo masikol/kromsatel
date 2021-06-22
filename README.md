@@ -1,5 +1,7 @@
 ## kromsatel
 
+Current version is `1.5.a` (2021-06-21 edition).
+
 ### Description
 
 A script for preprocessing raw reads obtained using [ARTIC's protocol](https://artic.network/ncov-2019) for sequencing SARS-CoV-2 genome. Here, "preprocessing" stands for splitting chimeric reads into consistent fragments according to primer scheme described in the [protocol](https://artic.network/ncov-2019) (or according to your own primer scheme).
@@ -73,6 +75,10 @@ When the database is created, you can proceed with cleaning.
 -d (--db) -- path to BLAST database of amplicons.
     Mandatory option (it sounds like an oxymoron but anyway).
 
+-p (--primers-to-rm) -- CSV file containing primers and their names.
+    It must be specified if you intend to remove primer sequences from reads.
+    See section "Removing primer sequences" for details.
+
 -t (--threads) -- number of threads to launch.
     Default: 1 thread.
 
@@ -88,9 +94,12 @@ When the database is created, you can proceed with cleaning.
     Default: 1000 reads.
 ```
 
-#### Examples
+#### Example
 ```
-./kromsatel.py corona_reads.fastq -d nCoV-2019_database/nCoV-2019_amplicons -t 4 --am 150
+./kromsatel.py corona_reads.fastq \
+  -d nCoV-2019_database/nCoV-2019_amplicons \
+  -p primers/nCov-2019_primers.csv \
+  -t 4 --am 150
 ```
 
 And two commands together, for clarity:
@@ -101,19 +110,46 @@ Create database:
 
 Run kromsatel
 
-`./kromsatel.py corona_reads.fastq -d nCoV-2019_database/nCoV-2019_amplicons`
+```
+./kromsatel.py corona_reads.fastq \
+  -d nCoV-2019_database/nCoV-2019_amplicons \
+  -p primers/nCov-2019_primers.csv
+```
 
 You can pass multiple fastq files to kromsatel, like this:
 
-`./kromsatel.py corona_reads_1.fastq corona_reads_2.fastq -d nCoV-2019_database/nCoV-2019_amplicons`
+```
+./kromsatel.py \
+  corona_reads_1.fastq corona_reads_2.fastq \
+  -d nCoV-2019_database/nCoV-2019_amplicons \
+  -p primers/nCov-2019_primers.csv
+```
 
 Or you can use wildcards (this will process all `.fastq.gz` file in directory `reads_dir`):
 
-`./kromsatel.py reads_dir/*.fastq.gz -d nCoV-2019_database/nCoV-2019_amplicons`
+```
+./kromsatel.py reads_dir/*.fastq.gz \
+  -d nCoV-2019_database/nCoV-2019_amplicons \
+  -p primers/nCov-2019_primers.csv
+```
 
-### Removing primer sequences from reads
+### Removing primer sequences
 
-kromsatel can either remove primer sequences from reads or do not remove. Accordingly, there are two "classes" of fasta files of amplicons: without primers (e.g. `amplicons-fasta/nCov-2019_amplicons.fasta`) and with primers (e.g. `amplicons-fasta/nCov-2019_amplicons_with-primers.fasta`). If you want to remove primers from sequences being processed with `kromsatel.py`, you should create your BLAST database from the first "class" of fasta files. Accordingly, if your BLAST database contains sequences from `_with-primers` fasta file, `kromsatel.py` will not remove primer sequences from reads.
+To make kromsatel remove sequences of primers, you must do the following:
+
+1. When you create BLAST database, use fasta file (one among `amplicons-fasta/*.fasta`) WITHOUT words "with-primers" in it's name.
+
+2. When you run kromsatel, pass CSV file containing primers with option `-p`.
+
+And if you intend to keep primers sequence in reads -- do all the opposite: use "...with-primers" file of amplicons and omit `-p` option.
+
+Not a convenient rule, but it is summarized in the table below:
+
+|                                | `-p` specified | no `-p` option |
+| ------------------------------ |:--------------:| --------------:|
+| `amplcions.fasta`              |       OK       |   NOT CORRECT  |
+| `amplcions_with-primers.fasta` |   NOT CORRECT  |       OK       |
+
 
 ### Output file
 
