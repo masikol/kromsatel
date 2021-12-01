@@ -1,6 +1,8 @@
-# -*- coding: utf-8 -*-
 
 from src.filesystem import OPEN_FUNCS, FORMATTING_FUNCS
+
+
+SPACE_HOLDER = '__<SPACE>__'
 
 
 def form_chunk(fastq_file, chunk_size, fmt_func):
@@ -25,7 +27,7 @@ def form_chunk(fastq_file, chunk_size, fmt_func):
         # end if
 
         fq_chunk[read_id] = {
-            'seq_id': read_id.partition(' ')[0][1:],
+            'seq_id': read_id[1:].replace(' ', SPACE_HOLDER),
             'seq': fmt_func(fastq_file.readline()),
             'cmnt': fmt_func(fastq_file.readline()),
             'qual': fmt_func(fastq_file.readline())
@@ -88,7 +90,9 @@ def write_fastq_record(fq_record, outfile):
     # :param outfile: file to which a record will be written;
     # :type outfile: _io.TextIOWrapper;
 
-    outfile.write('@{}\n{}\n{}\n{}\n'.format(fq_record['seq_id'],
-            fq_record['seq'], fq_record['cmnt'], fq_record['qual'])
+    outfile.write('@{}\n{}\n{}\n{}\n'.format(
+        fq_record['seq_id'].replace(SPACE_HOLDER, ' '),
+        fq_record['seq'], fq_record['cmnt'], fq_record['qual']
+        )
     )
 # end def write_fastq_record

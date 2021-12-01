@@ -1,6 +1,6 @@
 ## kromsatel
 
-Current version is `1.6.a` (2021-12-01 edition).
+Current version is `1.6.b` (2021-12-01 edition).
 
 ### Description
 
@@ -163,7 +163,7 @@ For the example above, output file will have name `corona_reads_cleaned.fastq` a
 In output file, reads are named in following way:
 
 ```
-  @<original_read_name>_<QSTART>_<QEND>
+  @<original_read_name>_<QSTART>-<QEND>
 ```
 
 QSTART and QEND are 1-based coordinates of, correspondingly, start and end of an aligned fragment, which yields the output read (see [Description](#Description) section above for details).

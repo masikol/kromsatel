@@ -2,6 +2,10 @@
 
 ## 2021-12-01 edition
 
+Kromsatel now keeps whole fastq read heders in output files instead of just the part before the first space.
+
+Version change: `1.6.a --> 1.6.b`.
+
 Add option `-o/--outdir` (output directory) to kromsatel.py.
 
 Version change: `1.5.a --> 1.6.a`.
