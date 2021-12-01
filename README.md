@@ -1,6 +1,6 @@
 ## kromsatel
 
-Current version is `1.5.a` (2021-06-21 edition).
+Current version is `1.6.a` (2021-12-01 edition).
 
 ### Description
 
@@ -71,6 +71,9 @@ When the database is created, you can proceed with cleaning.
 -h (--help) -- print help message and exit.
 
 -v (--version) -- print version and exit.
+
+-o (--outdir) -- output directory.
+    Default value is ./kromsatel_output
 
 -d (--db) -- path to BLAST database of amplicons.
     Mandatory option (it sounds like an oxymoron but anyway).

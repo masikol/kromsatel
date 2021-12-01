@@ -13,10 +13,13 @@ def handle_cl_args():
 
     # Get arguments
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hvd:t:c:p:',
-            ['help', 'version',
-            'db=', 'threads=', 'chunk-size=',
-            'am=', 'im=', 'primers-to-rm=']
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hvd:t:c:p:o:',
+            [
+                'help', 'version',
+                'db=', 'threads=', 'chunk-size=',
+                'am=', 'im=', 'primers-to-rm=',
+                'outdir='
+            ]
         )
     except getopt.GetoptError as opt_err:
         print( str(opt_err) )
@@ -57,6 +60,7 @@ def handle_cl_args():
         'min_len_major': 100,   # minimum length of "major" read
         'min_len_minor': 25,    # minimum length of "minor" read
         'primers_fpath': None,    # path to file of primers to remove
+        'outdir': os.path.join(os.getcwd(), 'kromsatel_output'), # output directory
     }
 
     # Handle options
@@ -143,6 +147,18 @@ def handle_cl_args():
                 platf_depend_exit(1)
             # end if
             kromsatel_args['primers_fpath'] = arg
+
+        elif opt in ('-o', '--outdir'):
+            kromsatel_args['outdir'] = os.path.abspath(arg)
+            if not os.path.isdir(kromsatel_args['outdir']):
+                try:
+                    os.makedirs(kromsatel_args['outdir'])
+                except OSError as err:
+                    print('Error: cannot create output directory.')
+                    print(str(err))
+                    platf_depend_exit(1)
+                # end try
+            # end if
         # end if
     # end for
 

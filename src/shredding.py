@@ -491,7 +491,9 @@ def clean_and_shred(
     chunk_size,
     min_len_major,
     min_len_minor,
-    primers_lengths):
+    primers_lengths,
+    outdir
+):
     # Function organizes analysis of dataframe of alignment data.
     #
     # :param fq_fpath: path to input fastq file;
@@ -509,11 +511,13 @@ def clean_and_shred(
     # :param primers_lengths: tuple mapping primer's index to it's length.
     #   In this tuple, index of a primer equals index of this primer in source .csv file;
     # :type primers_lengths: tuple<int>;
+    # :param outdir: path to output directory;
+    # :type outdir: str;
     #
     # Returns path to output file.
 
     # Get path to output file.
-    outfpath = src.filesystem.make_outfpath(fq_fpath)
+    outfpath = src.filesystem.make_outfpath(fq_fpath, outdir)
 
     # Empty output file
     with open(outfpath, 'w') as _:

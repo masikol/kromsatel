@@ -1,5 +1,3 @@
-# -*- encoding: utf-8 -*-
-
 import src.blast
 import src.shredding
 import src.parse_args
@@ -39,7 +37,8 @@ def main():
             args['chunk_size'],
             args['min_len_major'],
             args['min_len_minor'],
-            primers_lengths
+            primers_lengths,
+            args['outdir']
         )
 
         print('{} - File `{}` is processed.'.format(getwt(), fq_fpath))

@@ -1,5 +1,11 @@
 # kromsatel changelog
 
+## 2021-12-01 edition
+
+Add option `-o/--outdir` (output directory) to kromsatel.py.
+
+Version change: `1.5.a --> 1.6.a`.
+
 ## 2021-05-21 edition
 
 Improved algorithm for removing primer sequences. Although it slows kromsatel down twofold, it removes primers pretty well.

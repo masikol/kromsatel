@@ -17,26 +17,30 @@ FORMATTING_FUNCS = (
 )
 
 
-def make_outfpath(fq_fpath):
+def make_outfpath(fq_fpath, outdir):
     # Function configures path to output file.
     #
     # :param fq_fpath: path to input fastq file;
     # :type fq_fpath: str;
+    # :param outdir: path to output directory;
+    # :type outdir: str;
     #
     # Returns path to output file (str).
 
+    bname = os.path.basename(fq_fpath)
+
     try:
-        extention = re.search(r'(\.f(ast)?q(\.gz)?)', fq_fpath).group(1)
+        extention = re.search(r'(\.f(ast)?q(\.gz)?)', bname).group(1)
     except AttributeError as err:
         print( str(err) )
         print('Error -3. Please, contact the developer.')
         platf_depend_exit(-3)
     # end try
 
-    name_with_no_ext = fq_fpath.replace(extention, '')
+    name_with_no_ext = bname.replace(extention, '')
 
     return os.path.join(
-        os.path.dirname(fq_fpath),
+        outdir,
         '{}_cleaned.fastq'.format(name_with_no_ext)
     )
 # end def make_outfpath
