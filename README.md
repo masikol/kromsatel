@@ -78,6 +78,9 @@ When the database is created, you can proceed with cleaning.
 -d (--db) -- path to BLAST database of amplicons.
     Mandatory option (it sounds like an oxymoron but anyway).
 
+-r (--head-crop) -- number of nucleotides to crop from the head (5'-end) of all input reads.
+    Default value is 0.
+
 -p (--primers-to-rm) -- CSV file containing primers and their names.
     It must be specified if you intend to remove primer sequences from reads.
     See section "Removing primer sequences" for details.
