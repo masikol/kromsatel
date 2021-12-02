@@ -492,6 +492,7 @@ def clean_and_shred(
     min_len_major,
     min_len_minor,
     primers_lengths,
+    crop_5_prime,
     outdir
 ):
     # Function organizes analysis of dataframe of alignment data.
@@ -511,6 +512,9 @@ def clean_and_shred(
     # :param primers_lengths: tuple mapping primer's index to it's length.
     #   In this tuple, index of a primer equals index of this primer in source .csv file;
     # :type primers_lengths: tuple<int>;
+    # :param crop_5_prime: number of nucleotides to crop from 5'-end of each input sequence.
+    #        Default: 0.
+    # :type crop_5_prime: int;
     # :param outdir: path to output directory;
     # :type outdir: str;
     #
@@ -553,7 +557,7 @@ def clean_and_shred(
                 outfpath,
                 primers_lengths
             )
-            for fq_chunk in src.fastq.fastq_chunks(fq_fpath, chunk_size))
+            for fq_chunk in src.fastq.fastq_chunks(fq_fpath, chunk_size, crop_5_prime))
         )
     # end with
 

@@ -5,7 +5,7 @@ from src.filesystem import OPEN_FUNCS, FORMATTING_FUNCS
 SPACE_HOLDER = '__<SPACE>__'
 
 
-def form_chunk(fastq_file, chunk_size, fmt_func):
+def form_chunk(fastq_file, chunk_size, fmt_func, crop_5_prime=0):
     # Function reads lines from 'fastq_file' and composes a chunk of 'chunk_size' sequences.
     #
     # :param fastq_file: file instance from which to read;
@@ -26,19 +26,24 @@ def form_chunk(fastq_file, chunk_size, fmt_func):
             break
         # end if
 
-        fq_chunk[read_id] = {
-            'seq_id': read_id[1:].replace(' ', SPACE_HOLDER),
-            'seq': fmt_func(fastq_file.readline()),
-            'cmnt': fmt_func(fastq_file.readline()),
-            'qual': fmt_func(fastq_file.readline())
-        }
+        # Crop the sequence
+        sequence = fmt_func(fastq_file.readline())[crop_5_prime:]
+
+        if sequence != '':
+            fq_chunk[read_id] = {
+                'seq_id': read_id[1:].replace(' ', SPACE_HOLDER),
+                'seq': sequence,
+                'cmnt': fmt_func(fastq_file.readline()),
+                'qual': fmt_func(fastq_file.readline())
+            }
+        # end if
     # end for
 
     return fq_chunk, eof
 # end def form_chunk
 
 
-def fastq_chunks(fq_fpath, chunk_size):
+def fastq_chunks(fq_fpath, chunk_size, crop_5_prime=0):
 
     how_to_open = OPEN_FUNCS[ fq_fpath.endswith('.gz') ]
     fmt_func = FORMATTING_FUNCS[ fq_fpath.endswith('.gz') ]
@@ -50,7 +55,7 @@ def fastq_chunks(fq_fpath, chunk_size):
 
         while not eof:
 
-            fq_chunk, eof = form_chunk(fastq_file, chunk_size, fmt_func)
+            fq_chunk, eof = form_chunk(fastq_file, chunk_size, fmt_func, crop_5_prime)
 
             if len(fq_chunk) == 0:
                 return

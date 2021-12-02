@@ -13,11 +13,12 @@ def handle_cl_args():
 
     # Get arguments
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hvd:t:c:p:o:',
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hvd:t:c:p:r:o:',
             [
                 'help', 'version',
                 'db=', 'threads=', 'chunk-size=',
                 'am=', 'im=', 'primers-to-rm=',
+                'head-crop='
                 'outdir='
             ]
         )
@@ -59,7 +60,8 @@ def handle_cl_args():
         'chunk_size': 1000,     # fastq chunk
         'min_len_major': 100,   # minimum length of "major" read
         'min_len_minor': 25,    # minimum length of "minor" read
-        'primers_fpath': None,    # path to file of primers to remove
+        'primers_fpath': None,  # path to file of primers to remove
+        'crop_5_prime': 0,      # number of bases to crop from 5'-end of input sequences
         'outdir': os.path.join(os.getcwd(), 'kromsatel_output'), # output directory
     }
 
@@ -147,6 +149,20 @@ def handle_cl_args():
                 platf_depend_exit(1)
             # end if
             kromsatel_args['primers_fpath'] = arg
+
+        elif opt in ('-r', '--head-crop'):
+
+            try:
+                kromsatel_args['crop_5_prime'] = int(arg)
+                if kromsatel_args['crop_5_prime'] < 0:
+                    raise ValueError
+                # end if
+            except ValueError:
+                print('Invalid number of bases to crop passed with the option `{}`: {}'\
+                    .format(opt, arg))
+                print('It must be integer number > 0.')
+                platf_depend_exit(1)
+            # end try
 
         elif opt in ('-o', '--outdir'):
             kromsatel_args['outdir'] = os.path.abspath(arg)

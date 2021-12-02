@@ -38,6 +38,7 @@ def main():
             args['min_len_major'],
             args['min_len_minor'],
             primers_lengths,
+            args['crop_5_prime'],
             args['outdir']
         )
 
