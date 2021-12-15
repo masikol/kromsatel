@@ -14,7 +14,7 @@ def print_help(version, last_update_data):
     Default value is `./kromsatel_output`""")
     print("""  -d (--db) -- path to BLAST database of amplicons.
     Mandatory option (it sounds like an oxymoron but anyway).""")
-    print("""-p (--primers-to-rm) -- CSV file containing primers and their names.
+    print("""  -p (--primers-to-rm) -- CSV file containing primers and their names.
     It must be specified if you intend to remove primer sequences from reads.
     See section "Removing primer sequences" for details.""")
     print("""  -t (--threads) -- number of threads to launch.

@@ -5,6 +5,12 @@ from src.filesystem import OPEN_FUNCS, FORMATTING_FUNCS
 SPACE_HOLDER = '__<SPACE>__'
 
 
+def count_reads(file_path):
+    is_gzipped = fq_fpath.endswith('.gz')
+    return sum(1 for _ in OPEN_FUNCS[int(is_gzipped)](file_path)) // 4
+# end def count_reads
+
+
 def form_chunk(fastq_file, chunk_size, fmt_func):
     # Function reads lines from 'fastq_file' and composes a chunk of 'chunk_size' sequences.
     #
@@ -38,7 +44,7 @@ def form_chunk(fastq_file, chunk_size, fmt_func):
 # end def form_chunk
 
 
-def fastq_chunks(fq_fpath, chunk_size):
+def fastq_chunks_unpaired(fq_fpath, chunk_size):
 
     how_to_open = OPEN_FUNCS[ fq_fpath.endswith('.gz') ]
     fmt_func = FORMATTING_FUNCS[ fq_fpath.endswith('.gz') ]
@@ -63,7 +69,16 @@ def fastq_chunks(fq_fpath, chunk_size):
             # end if
         # end while
     # end with
-# end def fastq_chunks
+# end def fastq_chunks_unpaired
+
+
+def fastq_chunks_paired(forward_read_fpath, reverse_read_fpath, chunk_size):
+
+    return zip(
+        fastq_chunks_unpaired(forward_read_fpath, chunk_size),
+        fastq_chunks_unpaired(reverse_read_fpath, chunk_size),
+    )
+# end def fastq_chunks_paired
 
 
 def write_fastq2fasta(fq_chunk, query_fpath):
