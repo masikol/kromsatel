@@ -5,11 +5,11 @@ if [ $# -lt 1 ]; then
   exit 1
 fi
 
-VERSION='1.1.b'
+VERSION='1.2.a'
 HELP=0
 primers=''
 genome=''
-outfile_prefix='./my-amplicons'
+outfile='./my-amplicons.fasta'
 seqkit='seqkit'
 min_len_minor=25
 
@@ -21,7 +21,7 @@ do
     ;;
     g) genome="${OPTARG}"
     ;;
-    o) outfile_prefix="${OPTARG}"
+    o) outfile="${OPTARG}"
     ;;
     s) seqkit="${OPTARG}"
     ;;
@@ -30,7 +30,7 @@ do
     h) HELP=1
     break
     ;;
-    *) echo -e "\aError: invalid syntax. Here is help message:" >&2
+    *) echo -e "\aError: invalid syntax. Here is the help message:" >&2
     HELP=1
     break
     ;;
@@ -54,8 +54,8 @@ if [[ ${HELP} == 1 ]]; then
   echo " -h -- print help message and exit;"
   echo " -p -- CSV file with primers  (mandatory);"
   echo " -g -- fasta file with genome (mandatory);"
-  echo " -o -- prefix of output fasta files;"
-  echo "       default value: \`./my-amplicons\`"
+  echo " -o -- output fasta file;"
+  echo "       default value: \`./my-amplicons.fasta\`"
   echo " -s -- path to \`seqkit\` executable"
   echo -e "       (if \`seqkit\` is in your PATH, just omit this option);"
   echo " -i -- minimum length of a minor amplicon to output;"
@@ -90,8 +90,8 @@ for f in "${primers}" "${genome}"; do
 done
 
 # Create output directory if it does not exist
-if [[ ! -d `dirname "${outfile_prefix}"` ]]; then
-  mkdir -p `dirname "${outfile_prefix}"`
+if [[ ! -d `dirname "${outfile}"` ]]; then
+  mkdir -p `dirname "${outfile}"`
 fi
 
 # Check if seqkit is available
@@ -168,85 +168,58 @@ extract_amplicon_seq() {
   echo "${seq}"
 }
 
-# Function that calls seqkit amplicon, removes fasta header from it's output
-#   and finally removed blank lines, leaving only sequence. And returns this sequence.
-# $1 -- genome, #2 -- seqkit, $3 -- forward_primer, $4 -- reverse_primer.
-# This function does not remove primer sequences from amplicons.
-extract_amplicon_seq_with_primers() {
-  seq=`cat "$1" | "$2" amplicon --quiet -F "$3" -R "$4" | grep -v ">" | tr -d '\n'`
-
-  if [[ $? != 0 ]]; then
-    echo "Error occured while extracting amplicon for following primers:"
-    echo -en "FORWARD: $3\nREVERSE: $4\n"
-    exit 1
-  fi
-
-  echo "${seq}"
-}
-
 
 # |== PROCEED ==|
 
-outfiles=("${outfile_prefix}.fasta" "${outfile_prefix}_with-primers.fasta")
-extract_functions=(extract_amplicon_seq extract_amplicon_seq_with_primers)
-strings_to_print=("without" "keeping")
+echo -n '' > "${outfile}"
 
-for (( outfile_i=0; outfile_i<${#outfiles[@]}; outfile_i++ )); do
+real_outfile=`realpath "${outfile}"`
+echo -e "\nExtracting amplicons without primer sequences."
+echo -e "Output file:\n  \`${real_outfile}\`"
 
-  extract=${extract_functions[$outfile_i]}
+echo "Extracting major amplicons..."
+echo -en '>0'
 
-  # Init outfile
-  outfile=${outfiles[$outfile_i]}
-  real_outfile=`realpath "${outfile}"`
-  echo -n '' > "${outfile}"
+for (( i=0; i<${n_primer_seqs}; i+=2 )); do
+  # Get primers and title for current amplicon
+  forward="${primer_seqs[$i]}"
+  reverse="${primer_seqs[$i+1]}"
+  title=`get_major_title "${i}"`
 
-  echo -e "\nExtracting amplicons ${strings_to_print[$outfile_i]} primer sequences."
-  echo -e "Output file:\n  \`${real_outfile}\`"
+  # Extract amplicon and write it to outfile
+  seq=`extract_amplicon_seq "${genome}" "${seqkit}" "${forward}" "${reverse}"`
+  if [[ ! -z ${seq} ]]; then
+    echo -en ">${title}\n${seq}\n" >> "${outfile}"
+  fi
 
-  echo "Extracting major amplicons..."
-  echo -en '>0'
-
-  for (( i=0; i<${n_primer_seqs}; i+=2 )); do
-    # Get primers and title for current amplicon
-    forward="${primer_seqs[$i]}"
-    reverse="${primer_seqs[$i+1]}"
-    title=`get_major_title "${i}"`
-
-    # Extract amplicon and write it to outfile
-    seq=`$extract "${genome}" "${seqkit}" "${forward}" "${reverse}"`
-    if [[ ! -z ${seq} ]]; then
-      echo -en ">${title}\n${seq}\n" >> "${outfile}"
-    fi
-
-    let "ndone = ($i/2)+1"
-    printf "\b\b\b=>%2d" ${ndone}
-  done
-
-  let "status_value = $n_primer_seqs / 2"
-  echo "/${status_value}"
-
-  echo "Extracting minor amplicons..."
-  echo -en '>'
-
-  for (( i=2; i<${n_primer_seqs}; i+=2 )); do
-    # Get primers and title for current amplicon
-    forward="${primer_seqs[$i]}"
-    reverse="${primer_seqs[$i-1]}"
-    title=`get_minor_title "${i}"`
-
-    # Extract amplicon and write it to outfile
-    seq=`$extract "${genome}" "${seqkit}" "${forward}" "${reverse}"`
-    if [[ (! -z ${seq}) && (${#seq} -ge ${min_len_minor}) ]]; then
-      echo -en ">${title}\n${seq}\n" >> "${outfile}"
-    fi
-
-    let "ndone = ($i/2)"
-    printf "\b\b\b=>%2d" ${ndone}
-  done
-
-  let "status_value = $n_primer_seqs / 2 - 1"
-  echo "/${status_value}"
+  let "ndone = ($i/2)+1"
+  printf "\b\b\b=>%2d" ${ndone}
 done
+
+let "status_value = $n_primer_seqs / 2"
+echo "/${status_value}"
+
+echo "Extracting minor amplicons..."
+echo -en '>'
+
+for (( i=2; i<${n_primer_seqs}; i+=2 )); do
+  # Get primers and title for current amplicon
+  forward="${primer_seqs[$i]}"
+  reverse="${primer_seqs[$i-1]}"
+  title=`get_minor_title "${i}"`
+
+  # Extract amplicon and write it to outfile
+  seq=`extract_amplicon_seq "${genome}" "${seqkit}" "${forward}" "${reverse}"`
+  if [[ (! -z ${seq}) && (${#seq} -ge ${min_len_minor}) ]]; then
+    echo -en ">${title}\n${seq}\n" >> "${outfile}"
+  fi
+
+  let "ndone = ($i/2)"
+  printf "\b\b\b=>%2d" ${ndone}
+done
+
+let "status_value = $n_primer_seqs / 2 - 1"
+echo "/${status_value}"
 
 echo -e "\nTask is comleted."
 exit 0
