@@ -33,9 +33,9 @@ class Progress:
         self.next_report_num = self.next_report_num + self._REPORT_DELAY
     # end def increment_next_report
 
-    def print_status_bar():
+    def print_status_bar(self):
         bar_len = self._get_status_bar_len()
-        curr_num_done_reads = self.get_num_done_reads
+        curr_num_done_reads = self.get_num_done_reads()
         percent_done = round(curr_num_done_reads / self.NUM_READS_TOTAL * 100)
 
         sys.stdout.write(
@@ -50,7 +50,7 @@ class Progress:
         sys.stdout.flush()
     # end def print_status_bar
 
-    def _get_status_bar_len():
+    def _get_status_bar_len(self):
         try:
             bar_len = int(os.get_terminal_size().columns * 0.40)
         except OSError:

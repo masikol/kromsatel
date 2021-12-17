@@ -29,6 +29,28 @@ class PrimerScheme:
         self.primer_pairs = self._parse_primers()
     # end def __init__
 
+    def find_left_primer(self, read):
+        left_primers = map(lambda x: x.left_primer, self.primer_pairs)
+        for i, primer in enumerate(left_primers):
+            primer_end_pos = primer_match(read['seq'], primer.seq)
+            if not primer_end_pos is None:
+                return i, primer_end_pos
+            # end if
+        # end for
+        return None
+    # end def
+
+    def find_right_primer(self, read):
+        right_primers = map(lambda x: x.right_primer, self.primer_pairs)
+        for i, primer in enumerate(right_primers):
+            primer_end_pos = primer_match(read['seq'], primer.seq)
+            if not primer_end_pos is None:
+                return i, primer_end_pos
+            # end if
+        # end for
+        return None
+    # end def
+
     def _parse_primers(self):
 
         sep = ','
@@ -122,7 +144,7 @@ class Primer:
 # end class Primer
 
 
-def find_primer(read_seq, primer_seq, max_mismatch_num=2):
+def primer_match(read_seq, primer_seq, max_mismatch_num=2):
 
     num_mismatches = 0
     min_mismatch_to_discard = max_mismatch_num + 1
@@ -137,5 +159,5 @@ def find_primer(read_seq, primer_seq, max_mismatch_num=2):
         # end if
     # end for
 
-    return pos + 1
-# end def find_primer
+    return pos
+# end def primer_match

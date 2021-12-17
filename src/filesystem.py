@@ -1,10 +1,11 @@
-# -*- coding: utf-8 -*-
 
 import re
 import os
 import gzip
 
+from src.printing import print_err
 from src.platform import platf_depend_exit
+
 
 # For opening plain text and gzipped files
 OPEN_FUNCS = (open, gzip.open)
@@ -15,35 +16,6 @@ FORMATTING_FUNCS = (
     lambda line: line.strip(),   # format text line
     lambda line: line.decode('utf-8').strip()  # format gzipped line
 )
-
-
-def make_outfpath(fq_fpath, outdir):
-    # Function configures path to output file.
-    #
-    # :param fq_fpath: path to input fastq file;
-    # :type fq_fpath: str;
-    # :param outdir: path to output directory;
-    # :type outdir: str;
-    #
-    # Returns path to output file (str).
-
-    bname = os.path.basename(fq_fpath)
-
-    try:
-        extention = re.search(r'(\.f(ast)?q(\.gz)?)', bname).group(1)
-    except AttributeError as err:
-        print( str(err) )
-        print('Error -3. Please, contact the developer.')
-        platf_depend_exit(-3)
-    # end try
-
-    name_with_no_ext = bname.replace(extention, '')
-
-    return os.path.join(
-        outdir,
-        '{}_cleaned.fastq'.format(name_with_no_ext)
-    )
-# end def make_outfpath
 
 
 def rm_query_file(query_fpath):
@@ -59,3 +31,47 @@ def rm_query_file(query_fpath):
         print( str(oserr) )
     # end try
 # end rm_query_file
+
+
+def rm_fastq_extention(fpath):
+
+    fastq_pattern = r'.+(\.f(ast)?q(\.gz)?)$'
+    dirname = os.path.dirname(fpath)
+    basename = os.path.basename(fpath)
+    match_obj = re.match(fastq_pattern, basename)
+
+    if not match_obj is None:
+        extention = match_obj.group(1)
+        new_basename = basename.replace(extention, '')
+    else:
+        new_basename = basename
+    # end if
+
+    return os.path.join(dirname, new_basename)
+# end def rm_fastq_extention
+
+
+def init_file(fpath):
+    try:
+        with open(fpath, 'wt') as _:
+            pass
+        # end with
+    except OSError as err:
+        print_err('\nError: cannot initialize output file `{}`'.format(fpath))
+        print_err(str(err))
+        platf_depend_exit(1)
+    # end try
+# end def init_file
+
+
+def create_dir(dirpath):
+    if not os.path.exists(dirpath):
+        try:
+            os.makedirs(dirpath)
+        except OSError as err:
+            print_err('\nError: cannot create directory `{}`'.format(dirpath))
+            print_err(str(err))
+            platf_depend_exit(1)
+        # end try
+    # end if
+# end def create_dir

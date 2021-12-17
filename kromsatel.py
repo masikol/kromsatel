@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
 
 __version__ = '1.6.b'
 #                       YYYY-mm-dd
@@ -44,4 +43,5 @@ from src.main import main
 
 if __name__ == '__main__':
     main()
+    platf_depend_exit(0)
 # end if

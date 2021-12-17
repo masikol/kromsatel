@@ -6,7 +6,7 @@ SPACE_HOLDER = '__<SPACE>__'
 
 
 def count_reads(file_path):
-    is_gzipped = fq_fpath.endswith('.gz')
+    is_gzipped = file_path.endswith('.gz')
     return sum(1 for _ in OPEN_FUNCS[int(is_gzipped)](file_path)) // 4
 # end def count_reads
 
@@ -21,9 +21,9 @@ def form_chunk(fastq_file, chunk_size, fmt_func):
     # :param fmt_func: formating function from FORMMATING_FUNCS tuple;
 
     eof = False
-    fq_chunk = dict()
+    fq_chunk = [None] * chunk_size
 
-    for _ in range(chunk_size):
+    for i in range(chunk_size):
 
         read_id = fmt_func(fastq_file.readline())
 
@@ -32,7 +32,7 @@ def form_chunk(fastq_file, chunk_size, fmt_func):
             break
         # end if
 
-        fq_chunk[read_id] = {
+        fq_chunk[i] = {
             'seq_id': read_id[1:].replace(' ', SPACE_HOLDER),
             'seq': fmt_func(fastq_file.readline()),
             'cmnt': fmt_func(fastq_file.readline()),
@@ -40,7 +40,9 @@ def form_chunk(fastq_file, chunk_size, fmt_func):
         }
     # end for
 
-    return fq_chunk, eof
+    not_none = lambda x: not x is None
+
+    return tuple(filter(not_none, fq_chunk)), eof
 # end def form_chunk
 
 
@@ -74,10 +76,33 @@ def fastq_chunks_unpaired(fq_fpath, chunk_size):
 
 def fastq_chunks_paired(forward_read_fpath, reverse_read_fpath, chunk_size):
 
-    return zip(
-        fastq_chunks_unpaired(forward_read_fpath, chunk_size),
-        fastq_chunks_unpaired(reverse_read_fpath, chunk_size),
-    )
+    how_to_open_forward = OPEN_FUNCS[ forward_read_fpath.endswith('.gz') ]
+    fmt_func_forward = FORMATTING_FUNCS[ forward_read_fpath.endswith('.gz') ]
+    how_to_open_reverse = OPEN_FUNCS[ reverse_read_fpath.endswith('.gz') ]
+    fmt_func_reverse = FORMATTING_FUNCS[ reverse_read_fpath.endswith('.gz') ]
+
+    with how_to_open_forward(forward_read_fpath) as forward_file, \
+         how_to_open_reverse(reverse_read_fpath) as reverse_file:
+
+        # End of file
+        eof = False
+
+        while not eof:
+
+            forward_chunk, eof = form_chunk(forward_file, chunk_size, fmt_func_forward)
+            reverse_chunk, eof = form_chunk(reverse_file, chunk_size, fmt_func_reverse)
+
+            if len(forward_chunk) == 0 or len(reverse_chunk) == 0:
+                return
+            # end if
+
+            yield (forward_chunk, reverse_chunk)
+
+            if eof:
+                return
+            # end if
+        # end while
+    # end with
 # end def fastq_chunks_paired
 
 
