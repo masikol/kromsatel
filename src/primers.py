@@ -1,4 +1,5 @@
 
+import src.fasta
 from src.platform import platf_depend_exit
 from src.printing import print_err
 
@@ -21,35 +22,67 @@ _IUPAC_DICT = {
     'N': 'ATGC',
 }
 
+_COMPLEMENT_DICT = {
+    'A': 'T',
+    'T': 'A',
+    'G': 'C',
+    'C': 'G',
+    'R': 'Y',
+    'Y': 'R',
+    'W': 'W',
+    'S': 'S',
+    'K': 'M',
+    'M': 'K',
+    'H': 'D',
+    'V': 'B',
+    'B': 'V',
+    'D': 'H',
+    'N': 'N',
+}
+
+
+def _complement_base(base):
+    return _COMPLEMENT_DICT[base]
+# end def
+
+
+def _reverse_complement(seq):
+
+    return ''.join(map(_complement_base, seq))[::-1]
+# end def
+
 
 class PrimerScheme:
 
-    def __init__(self, primers_fpath):
-        self.primers_fpath = primers_fpath
+    def __init__(self, kromsatel_args):
+        self.primers_fpath = kromsatel_args['primers_fpath']
+        self.reference_fpath = kromsatel_args['reference_fpath']
         self.primer_pairs = self._parse_primers()
     # end def __init__
 
-    def find_left_primer(self, read):
-        left_primers = map(lambda x: x.left_primer, self.primer_pairs)
-        for i, primer in enumerate(left_primers):
-            primer_end_pos = primer_match(read['seq'], primer.seq)
-            if not primer_end_pos is None:
-                return i, primer_end_pos
-            # end if
-        # end for
-        return None
-    # end def
+    # TODO
+    # def find_left_primer(self, read):
+    #     left_primers = map(lambda x: x.left_primer, self.primer_pairs)
+    #     for i, primer in enumerate(left_primers):
+    #         primer_end_pos = primer_match(read['seq'], primer.seq)
+    #         if not primer_end_pos is None:
+    #             return i, primer_end_pos
+    #         # end if
+    #     # end for
+    #     return None
+    # # end def
 
-    def find_right_primer(self, read):
-        right_primers = map(lambda x: x.right_primer, self.primer_pairs)
-        for i, primer in enumerate(right_primers):
-            primer_end_pos = primer_match(read['seq'], primer.seq)
-            if not primer_end_pos is None:
-                return i, primer_end_pos
-            # end if
-        # end for
-        return None
-    # end def
+    # TODO
+    # def find_right_primer(self, read):
+    #     right_primers = map(lambda x: x.right_primer, self.primer_pairs)
+    #     for i, primer in enumerate(right_primers):
+    #         primer_end_pos = primer_match(read['seq'], primer.seq)
+    #         if not primer_end_pos is None:
+    #             return i, primer_end_pos
+    #         # end if
+    #     # end for
+    #     return None
+    # # end def
 
     def _parse_primers(self):
 
@@ -66,11 +99,35 @@ class PrimerScheme:
             platf_depend_exit(1)
         # end if
 
+        print('Parsing primers...')
+
+        reference_seq = src.fasta.read_fasta_sequence(self.reference_fpath)
+        find_start_pos = 0
+
         with open(self.primers_fpath, 'rt') as primers_file:
             for _ in range(n_lines // 2):
                 try:
+
+                    left_primer_seq, right_primer_seq = self._parse_primer_pair(primers_file, sep)
+
+                    left_start, left_end = _find_primer_anneal_coords(
+                        left_primer_seq,
+                        reference_seq,
+                        beg=find_start_pos
+                    )
+                    find_start_pos = left_start
+
+                    right_start, right_end = _find_primer_anneal_coords(
+                        _reverse_complement(right_primer_seq),
+                        reference_seq,
+                        beg=find_start_pos
+                    )
+
                     primer_pairs.append(
-                        self._parse_primer_pair(primers_file, sep)
+                        PrimerPair(
+                            Primer(left_start, left_end),
+                            Primer(right_start, right_end),
+                        )
                     )
                 except ValueError as err:
                     print_err('Error: cannot parse a line in file `{}.`'.format(self.primers_fpath))
@@ -80,6 +137,8 @@ class PrimerScheme:
             # end for
         # end with
 
+        print('Primers: annealing coordinates are found')
+
         return primer_pairs
     # end def parse_primers
 
@@ -87,16 +146,16 @@ class PrimerScheme:
     def _parse_primer_pair(self, primers_file, sep):
 
 
-        left_primer = self._parse_primer_from_csv_line(
+        left_primer_seq = self._parse_primer_from_csv_line(
             primers_file.readline(),
             sep
         )
-        right_primer = self._parse_primer_from_csv_line(
+        right_primer_seq = self._parse_primer_from_csv_line(
             primers_file.readline(),
             sep
         )
 
-        return PrimerPair(left_primer, right_primer)
+        return left_primer_seq, right_primer_seq
     # end def _parse_primer_pair
 
     def _parse_primer_from_csv_line(self, primer_line, sep=','):
@@ -111,12 +170,31 @@ class PrimerScheme:
             )
         # end if
 
-        primer_name = line_vals[0]
         primer_seq  = line_vals[1]
 
-        return Primer(primer_name, primer_seq)
+        return primer_seq
     # end def _parse_primer_from_csv_line
+
 # end class PrimerScheme
+
+
+def _find_primer_anneal_coords(primer_seq, reference_seq, beg=0):
+
+    start = reference_seq.find(primer_seq, beg)
+
+    if start == -1:
+        raise ValueError('Cannot find primer `{}` in the reference sequence'.format(primer_seq))
+    # end if
+
+    end = start + len(primer_seq) - 1
+
+    # Widen primer annealing interval by 1 bp in order not to
+    #   misclassify minor alignments as non-specific ones due to single match
+    #   occured by sheer chance.
+    start = start - 1
+
+    return start, end
+# end def
 
 
 class PrimerPair:
@@ -126,20 +204,19 @@ class PrimerPair:
     # end def __init__
 
     def __repr__(self):
-        return '{}:{}; {}:{};' \
+        return '[{}, {}]; [{}, {}];' \
             .format(
-                self.left_primer.name, self.left_primer.seq,
-                self.right_primer.name,
-                self.right_primer.seq
+                self.left_primer.start,  self.left_primer.end,
+                self.right_primer.start, self.right_primer.end
             )
     # end def __repr__
 # end class PrimerPair
 
 
 class Primer:
-    def __init__(self, name, seq):
-        self.name = name
-        self.seq  = seq
+    def __init__(self, start, end):
+        self.start = start # 0-based, left-closed
+        self.end   = end   # 0-based, right-closed
     # end def __init__
 # end class Primer
 

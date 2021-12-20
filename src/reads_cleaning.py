@@ -90,7 +90,7 @@ class ReadsCleaner:
         num_reads_total = self._count_reads()
 
         self.progress = Progress(num_reads_total)
-        self.primer_scheme = prm.PrimerScheme(self.args['primers_fpath'])
+        self.primer_scheme = prm.PrimerScheme(self.args)
 
         self._get_chunk_interator = self._choose_chunk_interator()
     # end def __init__

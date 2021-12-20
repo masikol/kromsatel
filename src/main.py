@@ -27,11 +27,14 @@ def main():
 
     src.blast.create_reference_database(args)
 
-    return
 
     print('{} - Start.'.format(getwt()))
 
     reads_cleaner = rcl.ReadsCleaner(args)
+    for x in reads_cleaner.primer_scheme.primer_pairs:
+        print(x)
+
+    return
     reads_cleaner.clean_reads()
 
     # print('{} - File `{}` is processed.'.format(getwt(), fq_fpath))
