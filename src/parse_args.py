@@ -1,10 +1,10 @@
-# -*- coding: utf-8 -*-
 
 import re
 import os
 import sys
 import getopt
 
+import src.blast
 from src.printing import print_err
 from src.platform import platf_depend_exit
 
@@ -14,13 +14,13 @@ def handle_cl_args():
 
     # Get arguments
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hv1:2:u:d:t:c:p:o:',
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hv1:2:u:p:r:t:c:m:a:o:',
             [
                 'help', 'version',
                 'reads-R1=', 'reads-R2=', 'reads-unpaired=',
-                'db=', 'threads=', 'chunk-size=',
-                'am=', 'im=', 'primers=',
-                'outdir='
+                'primers=', 'reference=',
+                'threads=', 'chunk-size=', 'min-len=', 'blast-task=',
+                'outdir=',
             ]
         )
     except getopt.GetoptError as opt_err:
@@ -29,43 +29,22 @@ def handle_cl_args():
         platf_depend_exit(2)
     # end try
 
-    # # Check and add fastq files to list of files to process:
-    # fq_fpaths = list()
-    # is_fastq = lambda f: not re.match(r'.*\.f(ast)?q(\.gz)?$', f) is None
-
-    # for arg in args:
-    #     if not os.path.exists(arg):
-    #         print_err('Error: file `{}` does not exist!'.format(arg))
-    #         platf_depend_exit(1)
-    #     elif not is_fastq(arg):
-    #         print_err('Error: file `{}` does not look like a fastq file!'.format(arg))
-    #         print_err('The script detects fastq files by extention and can process gzipped files.')
-    #         print_err('Permitted extentions: `.fastq`, `.fq`, `.fastq.gz`, `.fq.gz`')
-    #         platf_depend_exit(1)
-    #     else:
-    #         fq_fpaths.append(os.path.abspath(arg))
-    #     # end if
-    # # end for
-
-    # # Check if there are any files to process
-    # if len(fq_fpaths) == 0:
-    #     print_err('Please, specify input file(s).')
-    #     print_err('Type `{} -h` to see help message.'.format(sys.argv[0]))
-    #     platf_depend_exit(0)
-    # # end if
-
     kromsatel_args = {
         'reads_R1': list(),
         'reads_R2': list(),
         'reads_unpaired': list(),
-        'db_fpath': None,         # path to database
-        'primers_fpath': None,    # path to file of primers to remove
-        'n_thr': 1,               # number of threads
-        'chunk_size': 1000,       # fastq chunk
-        'min_len_major': 100,     # minimum length of "major" read
-        'min_len_minor': 25,      # minimum length of "minor" read
-        'outdir': os.path.join(os.getcwd(), 'kromsatel_output'), # output directory
-        'paired_mode': False
+        'primers_fpath': None,     # path to file of primers to remove
+        'reference_fpath': None,   # path to database
+        'n_thr': 1,                # number of threads
+        'chunk_size': 1000,        # reads
+        'min_len': 25,             # minimum length of an output read (bp)
+        'blast_task': 'megablast', # variant of BLAST algorithm
+        'outdir': os.path.join(    # output directory
+            os.getcwd(),
+            'kromsatel_output'
+        ),
+        'paired_mode': False,      # True if PE, False if unpaired
+        'use_index': True,         # True if blast should perform indexed search
     }
 
     # Handle options
@@ -104,21 +83,21 @@ def handle_cl_args():
                 kromsatel_args['reads_unpaired'].append(fpath)
             # end try
 
-        elif opt in ('-d', '--db'):
-            if not os.path.exists( '{}.nhr'.format(arg) ):
-                print_err('Error: database `{}` does not exist!'.format(arg))
-                platf_depend_exit(1)
-            else:
-                kromsatel_args['db_fpath'] = os.path.abspath(arg)
-            # end if
-
         # Handle primers path
         elif opt in ('-p', '--primers'):
             if not os.path.exists(arg):
-                print_err('Error: file `{}` does not exist!'.format(arg))
+                print_err('\nError: file `{}` does not exist!'.format(arg))
                 platf_depend_exit(1)
             # end if
             kromsatel_args['primers_fpath'] = arg
+
+        elif opt in ('-r', '--reference'):
+            if not os.path.exists('{}'.format(arg)):
+                print_err('\nError: file `{}` does not exist!'.format(arg))
+                platf_depend_exit(1)
+            else:
+                kromsatel_args['reference_fpath'] = os.path.abspath(arg)
+            # end if
 
         # Handle chunk size
         elif opt in ('-c', '--chunk-size'):
@@ -128,7 +107,7 @@ def handle_cl_args():
                     raise ValueError
                 # end if
             except ValueError:
-                print_err('Error: chunk_size (option `{}`) must be positive integer number.'\
+                print_err('\nError: chunk_size (option `{}`) must be positive integer number.'\
                     .format(opt))
                 platf_depend_exit(1)
             # end try
@@ -141,7 +120,7 @@ def handle_cl_args():
                     raise ValueError
                 # end if
             except ValueError:
-                print_err('Error: number of threads must be integer number > 0!')
+                print_err('\nError: number of threads must be integer number > 0!')
                 print_err(' And here is your value: `{}`'.format(arg))
                 platf_depend_exit(1)
             # end try
@@ -152,33 +131,27 @@ def handle_cl_args():
                 print_err('Switched to {} threads.\n'.format(kromsatel_args['n_thr']))
             # end if
 
-        # Handle min major read length
-        elif opt == '--am':
+        # Handle min minor read length
+        elif opt in ('-m', '--min-len'):
             try:
-                kromsatel_args['min_len_major'] = int(arg)
-                if kromsatel_args['min_len_major'] < 1:
+                kromsatel_args['min_len'] = int(arg)
+                if kromsatel_args['min_len'] < 1:
                     raise ValueError
                 # end if
             except ValueError:
-                print_err('Invalid minimum major read length passed with option `{}`: {}'\
+                print_err('\nInvalid minimum length of a result read passed with the option `{}`: {}'\
                     .format(opt, arg))
                 print_err('It must be integer number > 0.')
                 platf_depend_exit(1)
             # end try
 
-        # Handle min minor read length
-        elif opt == '--im':
-            try:
-                kromsatel_args['min_len_minor'] = int(arg)
-                if kromsatel_args['min_len_minor'] < 1:
-                    raise ValueError
-                # end if
-            except ValueError:
-                print_err('Invalid minimum minor read length passed with option `{}`: {}'\
-                    .format(opt, arg))
-                print_err('It must be integer number > 0.')
+        elif opt in ('-k', '--blast-task'):
+            if not arg in src.blastn.BLAST_TASKS:
+                print_err('\nError: invalid name of a blast task: {}.'.format(arg))
+                print_err('Allowed values: {}'.format(', '.join(src.blastn.BLAST_TASKS)))
                 platf_depend_exit(1)
-            # end try
+            # end if
+            kromsatel_args['blast_task'] = arg
 
         elif opt in ('-o', '--outdir'):
             kromsatel_args['outdir'] = os.path.abspath(arg)
@@ -186,7 +159,7 @@ def handle_cl_args():
                 try:
                     os.makedirs(kromsatel_args['outdir'])
                 except OSError as err:
-                    print_err('Error: cannot create output directory.')
+                    print_err('\nError: cannot create output directory.')
                     print_err(str(err))
                     platf_depend_exit(1)
                 # end try
@@ -201,6 +174,8 @@ def handle_cl_args():
     if not _input_data_ok(kromsatel_args):
         platf_depend_exit(1)
     # end if
+
+    kromsatel_args['use_index'] = src.blast.if_use_index(kromsatel_args['blast_task'])
 
     if len(kromsatel_args['reads_R1']) != 0:
         kromsatel_args['paired_mode'] = True
@@ -273,8 +248,8 @@ def _input_data_ok(kromsatel_args):
 
 
 def _mandatory_options_ok(kromsatel_args):
-    mandatory_options = ('-d/--db', '-p/--primers')
-    mandatory_arg_names = ('db_fpath', 'primers_fpath')
+    mandatory_options = ('-r/--reference', '-p/--primers')
+    mandatory_arg_names = ('reference_fpath', 'primers_fpath')
 
     for opt, arg_name in zip(mandatory_options, mandatory_arg_names):
         if kromsatel_args[arg_name] is None:

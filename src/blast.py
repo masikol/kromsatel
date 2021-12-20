@@ -2,7 +2,58 @@
 import os
 import subprocess as sp
 
+import src.filesystem as fs
 from src.platform import platf_depend_exit
+
+
+BLAST_TASKS = (
+    'megablast',
+    'dc-megablast',
+    'blastn',
+)
+
+
+def get_blastplus_dependencies(krosatel_args):
+
+    dependencies = [
+        'blastn',
+        'makeblastdb'
+    ]
+
+    if krosatel_args['use_index']:
+        dependencies.append('makembindex')
+    # end if
+
+    return dependencies
+# end def
+
+
+def if_use_index(blast_task):
+
+    # `megablast` and `blastn` support indexed searches
+    # `dc-megablast` does not
+    megablast, discomegablast, blastn = range(3)
+    blast_tasks_use_index = (
+        BLAST_TASKS[megablast],
+        BLAST_TASKS[blastn],
+    )
+    blast_tasks_dont_use_index = (
+        BLAST_TASKS[discomegablast],
+    )
+
+    if blast_task in blast_tasks_use_index:
+        return True
+    elif blast_task in blast_tasks_dont_use_index:
+        return False
+    else:
+        raise ValueError(
+            'Invalid name of a blast task: {}.\n  Allowed values: {}'.format(
+                blast_task,
+                ', '.join(BLAST_TASKS)
+            )
+        )
+    # end if
+# end def
 
 
 def check_program(program):
@@ -24,26 +75,107 @@ def check_program(program):
 # end def check_blastn
 
 
-def check_blast_db(db_fpath):
-    # Function checks if database passed to kromsatel is usable.
-    # It checkis it with blastdbcmd.
+# def check_blast_db(db_fpath):
+#     # Function checks if database passed to kromsatel is usable.
+#     # It checkis it with blastdbcmd.
 
-    program = 'blastdbcmd'
-    check_program(program)
+#     program = 'blastdbcmd'
+#     check_program(program)
 
-    check_cmd = '{} -info -db {}'.format(program, db_fpath)
+#     check_cmd = '{} -info -db {}'.format(program, db_fpath)
 
-    # Check database with blastdbcmd
-    pipe = sp.Popen(check_cmd, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+#     # Check database with blastdbcmd
+#     pipe = sp.Popen(check_cmd, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+#     stdout_stderr = pipe.communicate()
+
+#     if pipe.returncode != 0:
+#         print('\nError: blast database at `{}` is not usable.'.format(db_fpath))
+#         print('Please, make it again.')
+#         print(stdout_stderr[1].decode('utf-8'))
+#         platf_depend_exit(pipe.returncode)
+#     # end if
+# # end def check_blast_db
+
+
+def _configure_makeblastdb_cmd(fasta_fpath, db_fpath):
+    makeblastdb_cmd = ' '.join(
+        [
+            'makeblastdb',
+            '-in {} -input_type fasta'.format(fasta_fpath),
+            '-dbtype nucl',
+            '-parse_seqids',
+            '-out {}'.format(db_fpath),
+        ]
+    )
+
+    return makeblastdb_cmd
+# end def
+
+
+def _configure_makembindex_cmd(db_fpath):
+    makembindex_cmd = ' '.join(
+        [
+            'makembindex',
+            '-input {}'.format(db_fpath),
+            '-iformat blastdb'
+        ]
+    )
+
+    return makembindex_cmd
+# end def
+
+
+
+def create_reference_database(kromsatel_args):
+
+    db_dirpath = os.path.join(kromsatel_args['outdir'], 'blast_database')
+    fs.create_dir(db_dirpath)
+    db_fpath = os.path.join(db_dirpath, 'kromsatel_blast_database')
+
+    print('Creating the reference database for BLAST:\n  `{}`...'.format(db_fpath))
+    _make_blast_db(kromsatel_args['reference_fpath'], db_fpath)
+    print('Database: created')
+
+    if kromsatel_args['use_index']:
+        print('Indexing the database...')
+        _index_database(db_fpath)
+        print('Indexing: done')
+    else:
+        print('Index will not be created for the database.')
+    # end if
+
+    return db_fpath
+# end def
+
+
+def _make_blast_db(reference_fpath, db_fpath):
+    makeblastdb_cmd = _configure_makeblastdb_cmd(reference_fpath, db_fpath)
+
+    pipe = sp.Popen(makeblastdb_cmd, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
     stdout_stderr = pipe.communicate()
 
     if pipe.returncode != 0:
-        print('\nError: blast database at `{}` is not usable.'.format(db_fpath))
-        print('Please, make it again.')
-        print(stdout_stderr[1].decode('utf-8'))
-        platf_depend_exit(pipe.returncode)
+        print_err('\nCannot create blast database')
+        print_err(stdout_stderr[1].decode('utf-8'))
+        print_err(' Command: `{}`'.format(makeblastdb_cmd))
+        platf_depend_exit(1)
     # end if
-# end def check_blast_db
+# end def
+
+
+def _index_database(db_fpath):
+    makembindex_cmd = _configure_makembindex_cmd(db_fpath)
+
+    pipe = sp.Popen(makembindex_cmd, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+    stdout_stderr = pipe.communicate()
+
+    if pipe.returncode != 0:
+        print_err('\nCannot index the blast database `{}`'.format(db_fpath))
+        print_err(stdout_stderr[1].decode('utf-8'))
+        print_err(' Command: `{}`'.format(makembindex_cmd))
+        platf_depend_exit(1)
+    # end if
+# end def
 
 
 def configure_blastn_cmd(query_fpath, db_fpath):

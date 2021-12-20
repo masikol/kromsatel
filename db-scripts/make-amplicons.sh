@@ -116,9 +116,9 @@ echo -e "make-amplicons.sh Version ${VERSION}\n"
 
 # Validate and parse primers
 primer_seqs=()
-echo -n "Valudating primers... "
+echo -n "Validating primers... "
 while read -r line; do
-  if [[ ! "${line}" =~ .+,[AGCTagct]+ ]]; then
+  if [[ ! "${line}" =~ ^.+,[AGCTagct]+$ ]]; then
     echo "Error: invalid line in file \`${primers}\`:"
     echo " \"${line}\""
     exit 2

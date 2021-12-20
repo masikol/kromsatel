@@ -1,7 +1,7 @@
 
 
 
-# import src.blast
+import src.blast
 import src.output as out
 # import src.shredding
 import src.reads_cleaning as rcl
@@ -15,13 +15,19 @@ def main():
     # Parse command line arguments
     args = src.parse_args.handle_cl_args()
 
-    # Check if blastn is installed
-    # src.blast.check_program('blastn')
+    blastplus_dependencies = src.blast.get_blastplus_dependencies(args)
+
+    for ncbi_program in blastplus_dependencies:
+        src.blast.check_program(ncbi_program)
+    # end for
 
     print(args)
 
-    output = _configure_output(args)
-    args['output'] = output
+    args['output'] = _configure_output(args)
+
+    src.blast.create_reference_database(args)
+
+    return
 
     print('{} - Start.'.format(getwt()))
 
@@ -44,4 +50,3 @@ def _configure_output(args):
     # end if
     return output
 # end def _configure_output
-
