@@ -106,16 +106,11 @@ def fastq_chunks_paired(forward_read_fpath, reverse_read_fpath, chunk_size):
 # end def fastq_chunks_paired
 
 
-def write_fastq2fasta(fq_chunk, query_fpath):
-    # Function writes fastq-formatted chunk to fasta file.
-    #
-    # :param fq_chunk: dictionary of fastq-records;
-    # :type fq_chunk: dict<str: dict<str: str>>;
-    # :param query_fpath: path to query fasta file;
-    # :type query_fpath: str;
+def write_fastq2fasta(reads_chunk, query_fpath):
 
     with open(query_fpath, 'w') as query_file:
-        for fq_record in fq_chunk.values():
+        # for fq_record in fq_chunk.values():
+        for fq_record in reads_chunk:
             query_file.write('>{}\n{}\n'.format(fq_record['seq_id'],fq_record['seq']))
     # end with
 # end def

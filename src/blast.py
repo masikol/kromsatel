@@ -1,8 +1,11 @@
 
 import os
+import json
 import subprocess as sp
 
+import src.fastq
 import src.filesystem as fs
+from src.printing import print_err
 from src.platform import platf_depend_exit
 
 
@@ -178,51 +181,65 @@ def _index_database(db_fpath):
 # end def
 
 
-def configure_blastn_cmd(query_fpath, db_fpath):
-    # Function creates command for launching blastn.
-    # This command will be always the same, so let's create it once.
-    #
-    # :param query_fpath: path to query fasta file;
-    # :type query_fpath: str;
-    # :param db_fpath: path to database;
-    # :type db_fpath: str;
-    #
-    # Returns command which will launch aligning with blastn (str).
+def _configure_blastn_cmd(query_fpath, db_fpath, blast_task, alignment_fpath):
 
-    outfmt = '6 qseqid sseqid sstrand length qlen slen qstart qend sstart send'
+    outfmt = 15 # Single-file BLAST JSON
 
-    # Configure command line
-    blast_cmd = "blastn -query {} \
-    -db {} \
-    -task {} \
-    -evalue 1e-3 \
-    -outfmt '{}'".format(query_fpath,
-                         db_fpath,
-                         'dc-megablast',
-                         outfmt
+    blast_cmd = ' '.join(
+        [
+            'blastn',
+            '-query {}'.format(query_fpath),
+            '-db {}'.format(db_fpath),
+            '-task {}'.format(blast_task),
+            '-evalue 1e-3',
+            '-max_hsps 1', '-max_target_seqs 1',
+            '-outfmt {}'.format(outfmt),
+            '> {}'.format(alignment_fpath),
+        ]
     )
 
     return blast_cmd
-# end def configure_blastn_cmd
+# end def
 
 
-def blast_align(blast_cmd):
-    # Function alignes reads against fragments using Discontiguous Megablast.
-    #
-    # :param blast_cmd: command to execute;
-    # :type blast_cmd: str;
-    #
-    # Returns tabular string if format "outfmt 6" returned by blastn.
+def blast_align(reads_chunk, kromsatel_args):
+
+    query_fpath = os.path.join(
+        kromsatel_args['outdir'],
+        'kromsatel_query_{}.fasta'.format(os.getpid())
+    )
+
+    src.fastq.write_fastq2fasta(reads_chunk, query_fpath)
+
+    alignment_fpath = os.path.join(
+        kromsatel_args['outdir'],
+        'kromsatel_alignment_{}.json'.format(os.getpid())
+    )
+
+    blast_cmd = _configure_blastn_cmd(
+        query_fpath,
+        kromsatel_args['db_fpath'],
+        kromsatel_args['blast_task'],
+        alignment_fpath
+    )
 
     # Launch blastn
-    pipe = sp.Popen(blast_cmd, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+    pipe = sp.Popen(blast_cmd, shell=True, stderr=sp.PIPE)
     stdout_stderr = pipe.communicate()
 
     if pipe.returncode != 0:
-        print('\nError while aligning a sequence against amplion database')
-        print(stdout_stderr[1].decode('utf-8'))
-        platf_depend_exit(pipe.returncode)
+        print_err('\nError while aligning a sequence against the database')
+        print_err(stdout_stderr[1].decode('utf-8'))
+        platf_depend_exit(1)
     # end if
 
-    return stdout_stderr[0].decode('utf-8')
+    # fs.rm_temp_file(query_fpath)
+
+    with open(alignment_fpath, 'rt') as alignment_file:
+        aligmnents = json.load(alignment_file)
+    # end with
+
+    # fs.rm_temp_file(alignment_fpath)
+
+    return aligmnents['BlastOutput2']
 # end def blast_align

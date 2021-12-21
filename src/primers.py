@@ -62,26 +62,12 @@ class PrimerScheme:
 
     # TODO
     # def find_left_primer(self, read):
-    #     left_primers = map(lambda x: x.left_primer, self.primer_pairs)
-    #     for i, primer in enumerate(left_primers):
-    #         primer_end_pos = primer_match(read['seq'], primer.seq)
-    #         if not primer_end_pos is None:
-    #             return i, primer_end_pos
-    #         # end if
-    #     # end for
-    #     return None
+    #     pass
     # # end def
 
     # TODO
     # def find_right_primer(self, read):
-    #     right_primers = map(lambda x: x.right_primer, self.primer_pairs)
-    #     for i, primer in enumerate(right_primers):
-    #         primer_end_pos = primer_match(read['seq'], primer.seq)
-    #         if not primer_end_pos is None:
-    #             return i, primer_end_pos
-    #         # end if
-    #     # end for
-    #     return None
+    #     pass
     # # end def
 
     def _parse_primers(self):

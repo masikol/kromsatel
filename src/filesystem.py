@@ -18,19 +18,14 @@ FORMATTING_FUNCS = (
 )
 
 
-def rm_query_file(query_fpath):
-    # Function removes temporary query file.
-    #
-    # :param query_fpath: path to query file;
-    # :type query_fpath: str;
-
+def rm_temp_file(file_path):
     try:
-        os.unlink(query_fpath)
+        os.unlink(file_path)
     except OSError as oserr:
-        print('Warning: Cannot remove temporary file `{}`'.format(query_fpath))
-        print( str(oserr) )
+        print_err('Warning: Cannot remove temporary file `{}`'.format(file_path))
+        print_err( str(oserr) )
     # end try
-# end rm_query_file
+# end def
 
 
 def rm_fastq_extention(fpath):

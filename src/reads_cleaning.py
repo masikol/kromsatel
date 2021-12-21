@@ -7,6 +7,7 @@ import multiprocessing as mp
 import src.fastq
 import src.primers as prm
 from src.printing import getwt
+from src.alignment import parse_alignments, Alignment
 
 
 # This damned stuff should be global, because
@@ -105,7 +106,7 @@ class ReadsCleaner:
         # Proceed
         with mp.Pool(self.args['n_thr']) as pool:
             pool.starmap(
-                self._clean_reads_chunk,
+                self._clean_reads_chunk_paired,
                 (
                     (reads_chunk,) for reads_chunk in reads_chunks()
                 )
@@ -120,16 +121,41 @@ class ReadsCleaner:
     # end def clean_reads
 
 
-    def _clean_reads_chunk(self, reads_chunk):
-        print()
+    def _clean_reads_chunk_paired(self, reads_chunk):
 
         chunk_interator = self._get_chunk_interator(reads_chunk)
 
-        for read_or_pair in chunk_interator:
-            self._primer_classif_paired(read_or_pair)
-        # end for
-    # end def _clean_chunk
+        forward_chunk = reads_chunk[0]
+        forward_alignments = parse_alignments(
+            src.blast.blast_align(forward_chunk, self.args)
+        )
 
+        reverse_chunk = reads_chunk[1]
+        reverse_alignments = parse_alignments(
+            src.blast.blast_align(reverse_chunk, self.args)
+        )
+
+        print()
+        print(len(forward_alignments))
+        print(len(reverse_alignments))
+        f_ids = map(lambda x: x.partition('__<SPACE>__')[0], forward_alignments.keys())
+        r_ids = map(lambda x: x.partition('__<SPACE>__')[0], reverse_alignments.keys())
+        print(
+            set(f_ids) == set(r_ids)
+        )
+
+        for fn, rn in zip(forward_alignments.keys(), reverse_alignments.keys()):
+            fn_p = fn.partition('__<SPACE>__')[0]
+            rn_p = rn.partition('__<SPACE>__')[0]
+            if fn_p != rn_p:
+                print(fn)
+                
+
+
+        # for read_or_pair in chunk_interator:
+        #     self._classify_read_pair(read_or_pair)
+        # # end for
+    # end def
 
     def _count_reads(self):
         print('{} - Counting reads...'.format(getwt()))
@@ -183,7 +209,7 @@ class ReadsCleaner:
     # end def
 
 
-    def _primer_classif_paired(self, read_pair):
+    def _classify_read_pair(self, read_pair):
 
         forward_read = read_pair[0]
         reverse_read = read_pair[1]
@@ -216,7 +242,7 @@ class ReadsCleaner:
     # end def
 
 
-    # def _primer_classif_unpaired(self, read):
+    # def _classify_read(self, read):
 
 
     # # end def

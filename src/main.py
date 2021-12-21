@@ -25,16 +25,14 @@ def main():
 
     args['output'] = _configure_output(args)
 
-    src.blast.create_reference_database(args)
-
+    args['db_fpath'] = src.blast.create_reference_database(args)
 
     print('{} - Start.'.format(getwt()))
 
     reads_cleaner = rcl.ReadsCleaner(args)
-    for x in reads_cleaner.primer_scheme.primer_pairs:
-        print(x)
+    # for x in reads_cleaner.primer_scheme.primer_pairs:
+    #     print(x)
 
-    return
     reads_cleaner.clean_reads()
 
     # print('{} - File `{}` is processed.'.format(getwt(), fq_fpath))
