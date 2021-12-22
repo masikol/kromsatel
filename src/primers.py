@@ -1,26 +1,9 @@
 
 import src.fasta
-from src.platform import platf_depend_exit
 from src.printing import print_err
+from src.alignment import Alignment
+from src.platform import platf_depend_exit
 
-
-_IUPAC_DICT = {
-    'A': 'A',
-    'T': 'T',
-    'G': 'G',
-    'C': 'C',
-    'R': 'AG',
-    'Y': 'CY',
-    'W': 'AT',
-    'S': 'GC',
-    'K': 'GT',
-    'M': 'AC',
-    'H': 'ATC',
-    'V': 'AGC',
-    'B': 'TGC',
-    'D': 'ATG',
-    'N': 'ATGC',
-}
 
 _COMPLEMENT_DICT = {
     'A': 'T',
@@ -41,14 +24,13 @@ _COMPLEMENT_DICT = {
 }
 
 
-def _complement_base(base):
-    return _COMPLEMENT_DICT[base]
+def _reverse_complement(seq):
+    return ''.join(map(_complement_base, seq))[::-1]
 # end def
 
 
-def _reverse_complement(seq):
-
-    return ''.join(map(_complement_base, seq))[::-1]
+def _complement_base(base):
+    return _COMPLEMENT_DICT[base]
 # end def
 
 
@@ -60,15 +42,26 @@ class PrimerScheme:
         self.primer_pairs = self._parse_primers()
     # end def __init__
 
-    # TODO
-    # def find_left_primer(self, read):
-    #     pass
-    # # end def
+    def find_primer_by_coord(self, coord):
+        left, right = True, False
+        for i, pair in enumerate(self.primer_pairs):
+            if self.check_coord_within_primer(coord, i, left=True):
+                return i, left
+            if self.check_coord_within_primer(coord, i, left=False):
+                return i, right
+            # end if
+        # end for
+        return None, None
+    # end def
 
-    # TODO
-    # def find_right_primer(self, read):
-    #     pass
-    # # end def
+    def check_coord_within_primer(self, coord, primer_pair_number, left=True):
+        if left:
+            primer = self.primer_pairs[primer_pair_number].left_primer
+        else:
+            primer = self.primer_pairs[primer_pair_number].right_primer
+        # end if
+        return primer.start <= coord <= primer.end
+    # end def
 
     def _parse_primers(self):
 
@@ -99,6 +92,7 @@ class PrimerScheme:
                     left_start, left_end = _find_primer_anneal_coords(
                         left_primer_seq,
                         reference_seq,
+                        left=True,
                         beg=find_start_pos
                     )
                     find_start_pos = left_start
@@ -106,6 +100,7 @@ class PrimerScheme:
                     right_start, right_end = _find_primer_anneal_coords(
                         _reverse_complement(right_primer_seq),
                         reference_seq,
+                        left=False,
                         beg=find_start_pos
                     )
 
@@ -164,7 +159,7 @@ class PrimerScheme:
 # end class PrimerScheme
 
 
-def _find_primer_anneal_coords(primer_seq, reference_seq, beg=0):
+def _find_primer_anneal_coords(primer_seq, reference_seq, left=True, beg=0):
 
     start = reference_seq.find(primer_seq, beg)
 
@@ -177,7 +172,12 @@ def _find_primer_anneal_coords(primer_seq, reference_seq, beg=0):
     # Widen primer annealing interval by 1 bp in order not to
     #   misclassify minor alignments as non-specific ones due to single match
     #   occured by sheer chance.
-    start = start - 1
+    random_match_amendment = 1 # bp
+    if left:
+        start = start - random_match_amendment
+    else:
+        end   = end   + random_match_amendment
+    # end if
 
     return start, end
 # end def

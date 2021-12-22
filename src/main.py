@@ -30,8 +30,9 @@ def main():
     print('{} - Start.'.format(getwt()))
 
     reads_cleaner = rcl.ReadsCleaner(args)
-    # for x in reads_cleaner.primer_scheme.primer_pairs:
-    #     print(x)
+    # for i, x in enumerate(reads_cleaner.primer_scheme.primer_pairs):
+    #     print(i, x)
+    # return
 
     reads_cleaner.clean_reads()
 
