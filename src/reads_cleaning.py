@@ -59,12 +59,10 @@ class ReadsCleaner:
         pool.join()
 
         self.progress.print_status_bar()
-        # print()
     # end def clean_reads
 
 
     def _clean_reads_chunk_paired(self, reads_chunk):
-        # print()
 
         forward_chunk = reads_chunk[0]
         forward_alignments = parse_alignments(
@@ -77,21 +75,6 @@ class ReadsCleaner:
         )
 
         binner = PairedBinner(self.args['output'])
-
-        # print()
-        # print(len(forward_alignments))
-        # print(len(reverse_alignments))
-        # f_ids = map(lambda x: x.partition('__<SPACE>__')[0], forward_alignments.keys())
-        # r_ids = map(lambda x: x.partition('__<SPACE>__')[0], reverse_alignments.keys())
-        # print(
-        #     set(f_ids) == set(r_ids)
-        # )
-
-        # for fn, rn in zip(forward_alignments.keys(), reverse_alignments.keys()):
-        #     fn_p = fn.partition('__<SPACE>__')[0]
-        #     rn_p = rn.partition('__<SPACE>__')[0]
-        #     if fn_p != rn_p:
-        #         print(fn)
 
         for forward_read, reverse_read in zip(*reads_chunk):
 
@@ -138,9 +121,6 @@ class ReadsCleaner:
 
                 forward_start_primer_found = not forward_start_primer_num is None
                 reverse_left = not forward_left
-
-                # print(forward_alignment)
-                # print(reverse_alignment)
 
                 if forward_start_primer_found:
                     reverse_start_major = \
@@ -200,12 +180,6 @@ class ReadsCleaner:
                     # end if
                 # end if
 
-                # print('Classification: {}'.format(classification))
-                # print('Forward start primer', forward_start_primer_num, forward_left)
-                # print('Reverse start primer', reverse_start_primer_num, reverse_left)
-                # print('Forward end needs crop: {} ({})'.format(crop_forward_end, forward_end_primer_num))
-                # print('Reverse end needs crop: {} ({})'.format(crop_reverse_end, reverse_end_primer_num))
-
                 if classification == MAJOR:
                     reverse_start_primer_num = forward_start_primer_num
                 elif classification == MINOR:
@@ -238,16 +212,10 @@ class ReadsCleaner:
                     # end if
                 # end if
 
-                # print('After trimming and cropping:')
-                # print(forward_alignment)
-                # print(reverse_alignment)
-
                 trimmed_forward_align_len = forward_alignment.get_align_len()
                 trimmed_reverse_align_len = reverse_alignment.get_align_len()
                 forward_survives = trimmed_forward_align_len >= self.MIN_LEN
                 reverse_survives = trimmed_reverse_align_len >= self.MIN_LEN
-                # print('Alignment lengths: F:{}, R:{}'.format(trimmed_forward_align_len, trimmed_reverse_align_len))
-                # print('Survivors: F:{}, R:{}'.format(forward_survives, reverse_survives))
 
                 if forward_survives:
                     forward_read = self._trim_read(forward_read, forward_alignment)
@@ -271,22 +239,7 @@ class ReadsCleaner:
                     binner.add_reverse_unpaired_read(reverse_read)
                 # end if
             # end if
-            # print('\n')
         # end for
-
-        # print()
-        # print('Major:')
-        # print(binner.major_forward_reads)
-        # print(binner.major_reverse_reads)
-        # print('Minor:')
-        # print(binner.minor_forward_reads)
-        # print(binner.minor_reverse_reads)
-        # print('Abnormal:')
-        # print(binner.abnormal_forward_reads)
-        # print(binner.abnormal_reverse_reads)
-        # print('Unpaired:')
-        # print(binner.unpaired_forward_reads)
-        # print(binner.unpaired_reverse_reads)
 
         with output_lock:
             binner.write_binned_reads()
@@ -295,12 +248,12 @@ class ReadsCleaner:
             prev_next_value = self.progress.get_next_report_num()
             self.progress.increment_done(len(forward_chunk))
             self.progress.increment_next_report()
+            if self.progress.get_next_report_num() != prev_next_value:
+                with print_lock:
+                    self.progress.print_status_bar()
+                # end with
+            # end if
         # end with
-        if self.progress.get_next_report_num() != prev_next_value:
-            with print_lock:
-                self.progress.print_status_bar()
-            # end with
-        # end if
     # end def
 
     def _trim_read(self, read, alignment):
