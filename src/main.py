@@ -21,7 +21,7 @@ def main():
         src.blast.check_program(ncbi_program)
     # end for
 
-    print(args)
+    # print(args)
 
     args['output'] = _configure_output(args)
 
@@ -40,7 +40,7 @@ def main():
     # print('Output file: `{}`'.format(outfpath))
     # print('-------')
 
-    print('{} - Completed.'.format(getwt()))
+    print('\n{} - Completed.'.format(getwt()))
 # end def main
 
 

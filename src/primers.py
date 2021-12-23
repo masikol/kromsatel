@@ -1,6 +1,6 @@
 
 import src.fasta
-from src.printing import print_err
+from src.printing import print_err, getwt
 from src.alignment import Alignment
 from src.platform import platf_depend_exit
 
@@ -42,19 +42,30 @@ class PrimerScheme:
         self.primer_pairs = self._parse_primers()
     # end def __init__
 
-    def find_primer_by_coord(self, coord):
-        left, right = True, False
+    def find_left_primer_by_coord(self, coord):
         for i, pair in enumerate(self.primer_pairs):
             if self.check_coord_within_primer(coord, i, left=True):
-                return i, left
-            if self.check_coord_within_primer(coord, i, left=False):
-                return i, right
+                return i
             # end if
         # end for
-        return None, None
+        return None
+    # end def
+
+    def find_right_primer_by_coord(self, coord):
+        for i, pair in enumerate(self.primer_pairs):
+            if self.check_coord_within_primer(coord, i, left=False):
+                return i
+            # end if
+        # end for
+        return None
     # end def
 
     def check_coord_within_primer(self, coord, primer_pair_number, left=True):
+
+        if primer_pair_number < 0 or primer_pair_number > len(self.primer_pairs)-1:
+            return False
+        # end if
+
         if left:
             primer = self.primer_pairs[primer_pair_number].left_primer
         else:
@@ -78,7 +89,7 @@ class PrimerScheme:
             platf_depend_exit(1)
         # end if
 
-        print('Parsing primers...')
+        print('{} - Parsing primers...'.format(getwt()))
 
         reference_seq = src.fasta.read_fasta_sequence(self.reference_fpath)
         find_start_pos = 0
@@ -118,7 +129,7 @@ class PrimerScheme:
             # end for
         # end with
 
-        print('Primers: annealing coordinates are found')
+        print('{} - Primers: annealing coordinates are found'.format(getwt()))
 
         return primer_pairs
     # end def parse_primers
@@ -169,10 +180,11 @@ def _find_primer_anneal_coords(primer_seq, reference_seq, left=True, beg=0):
 
     end = start + len(primer_seq) - 1
 
-    # Widen primer annealing interval by 1 bp in order not to
-    #   misclassify minor alignments as non-specific ones due to single match
+    # Widen primer annealing interval a bit in order not to
+    #   misclassify minor alignments as abnormal ones due to single match
+    adapter_seq = 'AGATCGGAAGAGC'
     #   occured by sheer chance.
-    random_match_amendment = 1 # bp
+    random_match_amendment = len(adapter_seq) # bp
     if left:
         start = start - random_match_amendment
     else:

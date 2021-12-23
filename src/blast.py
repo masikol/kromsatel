@@ -5,7 +5,7 @@ import subprocess as sp
 
 import src.fastq
 import src.filesystem as fs
-from src.printing import print_err
+from src.printing import print_err, getwt
 from src.platform import platf_depend_exit
 
 
@@ -135,14 +135,14 @@ def create_reference_database(kromsatel_args):
     fs.create_dir(db_dirpath)
     db_fpath = os.path.join(db_dirpath, 'kromsatel_blast_database')
 
-    print('Creating the reference database for BLAST:\n  `{}`...'.format(db_fpath))
+    print('{} - Creating the reference database for BLAST:\n  `{}`...'.format(getwt(), db_fpath))
     _make_blast_db(kromsatel_args['reference_fpath'], db_fpath)
-    print('Database: created')
+    print('{} - Database: created'.format(getwt()))
 
     if kromsatel_args['use_index']:
-        print('Indexing the database...')
+        print('{} - Indexing the database...'.format(getwt()))
         _index_database(db_fpath)
-        print('Indexing: done')
+        print('{} - Indexing: done'.format(getwt()))
     else:
         print('Index will not be created for the database.')
     # end if
@@ -192,6 +192,7 @@ def _configure_blastn_cmd(query_fpath, db_fpath, blast_task, alignment_fpath):
             '-db {}'.format(db_fpath),
             '-task {}'.format(blast_task),
             '-evalue 1e-3',
+            '-gapopen 2 -gapextend 2',
             '-max_hsps 1', '-max_target_seqs 1',
             '-outfmt {}'.format(outfmt),
             '> {}'.format(alignment_fpath),
@@ -233,13 +234,13 @@ def blast_align(reads_chunk, kromsatel_args):
         platf_depend_exit(1)
     # end if
 
-    # fs.rm_temp_file(query_fpath)
+    fs.rm_temp_file(query_fpath)
 
     with open(alignment_fpath, 'rt') as alignment_file:
         aligmnents = json.load(alignment_file)
     # end with
 
-    # fs.rm_temp_file(alignment_fpath)
+    fs.rm_temp_file(alignment_fpath)
 
     return aligmnents['BlastOutput2']
 # end def blast_align

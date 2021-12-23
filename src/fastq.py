@@ -117,17 +117,10 @@ def write_fastq2fasta(reads_chunk, query_fpath):
 
 
 def write_fastq_record(fq_record, outfile):
-    # Function writes a fastq record to given file
-    #
-    # :param fq_record: dictionary of following structure:
-    #   {'seq_id': <seq_title>, 'seq': <sequence>, 'cmnt': <comment>, 'qual': <quality_string>};
-    # :type fq_record: dict<str: str>;
-    # :param outfile: file to which a record will be written;
-    # :type outfile: _io.TextIOWrapper;
-
-    outfile.write('@{}\n{}\n{}\n{}\n'.format(
-        fq_record['seq_id'].replace(SPACE_HOLDER, ' '),
-        fq_record['seq'], fq_record['cmnt'], fq_record['qual']
+    # `outfile` should be opened for appending
+        outfile.write('@{}\n{}\n{}\n{}\n'.format(
+            fq_record['seq_id'].replace(SPACE_HOLDER, ' '),
+            fq_record['seq'], fq_record['cmnt'], fq_record['qual']
+            )
         )
-    )
-# end def write_fastq_record
+# end def

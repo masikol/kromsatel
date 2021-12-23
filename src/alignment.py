@@ -36,15 +36,17 @@ class Alignment:
         hsp = search_result['hits'][0]['hsps'][0]
 
         self.query_name = search_result['query_title']
-        self.align_len = hsp['align_len']
+        # self.align_len = hsp['align_len']
 
         self.query_start = hsp['query_from'] - 1 # 1-based to 0-based
         self.query_end   = hsp[ 'query_to' ] - 1 # 1-based to 0-based
-        self.query_gap_locations = _find_gap_locations(hsp['qseq'])
 
         self.ref_start = hsp['hit_from'] - 1     # 1-based to 0-based
         self.ref_end   = hsp[ 'hit_to' ] - 1     # 1-based to 0-based
-        self.ref_gap_locations = _find_gap_locations(hsp['hseq'])
+
+        # Temporarily disabled
+        # self.query_gap_locations = _find_gap_locations(hsp['qseq'])
+        # self.ref_gap_locations = _find_gap_locations(hsp['hseq'])
 
         query_strand_plus = True if hsp['query_strand'].upper() == 'PLUS' else False
         ref_strand_plus   = True if hsp[ 'hit_strand' ].upper() == 'PLUS' else False
@@ -57,18 +59,22 @@ class Alignment:
         # end if
     # end def
 
+    def get_align_len(self):
+        return max(0, self.ref_end - self.ref_start)
+    # end def
 
     def __repr__(self):
-        return '{}\nQ:[{}-{}];R:[{}-{}];({})\nQgaps:{}\nRgaps:{}' \
+        # return '{}\nQ:[{}-{}];R:[{}-{}];({})\nQgaps:{}\nRgaps:{}' \
+        return '{}\nQ:[{}-{}];R:[{}-{}];({})' \
             .format(
                 self.query_name,
                 self.query_start,
                 self.query_end,
                 self.ref_start,
                 self.ref_end,
-                '+' if self.align_strand_plus else '-',
-                self.query_gap_locations,
-                self.ref_gap_locations
+                '+' if self.align_strand_plus else '-'#,
+                # self.query_gap_locations,
+                # self.ref_gap_locations
             )
     # end def
 # end class

@@ -16,8 +16,8 @@ class UnpairedOutput:
         self._set_major_outfpath()
         self.minor_outfpath = None
         self._set_minor_outfpath()
-        self.trash_outfpath = None
-        self._set_trash_outfpath()
+        self.abnormal_outfpath = None
+        self._set_abnormal_outfpath()
 
         self._init_output()
     # end def __init__
@@ -29,7 +29,7 @@ class UnpairedOutput:
         output_fpaths = (
             self.major_outfpath,
             self.minor_outfpath,
-            self.trash_outfpath,
+            self.abnormal_outfpath,
         )
         for outfpath in output_fpaths:
             fs.init_file(outfpath)
@@ -46,10 +46,10 @@ class UnpairedOutput:
         self.minor_outfpath = self._configure_outfpath(suffix)
     # end def _set_minor_outfpath
 
-    def _set_trash_outfpath(self):
-        suffix = 'trash'
-        self.trash_outfpath = self._configure_outfpath(suffix)
-    # end def _set_trash_outfpath
+    def _set_abnormal_outfpath(self):
+        suffix = 'abnormal'
+        self.abnormal_outfpath = self._configure_outfpath(suffix)
+    # end def _set_abnormal_outfpath
 
     def _configure_outfpath(self, suffix):
         return os.path.join(
@@ -69,52 +69,63 @@ class PairedOutput:
         )
         self.sample_name = self._get_sample_name()
 
-        self.forward_major_outfpath = None
-        self.reverse_major_outfpath = None
+        self.major_forward_outfpath = None
+        self.major_reverse_outfpath = None
         self._set_major_outfpaths()
-        self.forward_minor_outfpath = None
-        self.reverse_minor_outfpath = None
+        self.minor_forward_outfpath = None
+        self.minor_reverse_outfpath = None
         self._set_minor_outfpaths()
-        self.forward_trash_outfpath = None
-        self.reverse_trash_outfpath = None
-        self._set_trash_outfpaths()
+        self.abnormal_forward_outfpath = None
+        self.abnormal_reverse_outfpath = None
+        self._set_abnormal_outfpaths()
+        self.unpaired_forward_outfpath = None
+        self.unpaired_reverse_outfpath = None
+        self._set_unpaired_outfpaths()
 
         self._init_output()
-    # end def __init__
+    # end def
 
     def _init_output(self):
         fs.create_dir(self.outdir)
 
         output_fpaths = (
-            self.forward_major_outfpath,
-            self.reverse_major_outfpath,
-            self.forward_minor_outfpath,
-            self.reverse_minor_outfpath,
-            self.forward_trash_outfpath,
-            self.reverse_trash_outfpath,
+            self.major_forward_outfpath,
+            self.major_reverse_outfpath,
+            self.minor_forward_outfpath,
+            self.minor_reverse_outfpath,
+            self.abnormal_forward_outfpath,
+            self.abnormal_reverse_outfpath,
+            self.unpaired_forward_outfpath,
+            self.unpaired_reverse_outfpath,
         )
         for outfpath in output_fpaths:
             fs.init_file(outfpath)
         # end for
-    # end def init_output
+    # end def
 
     def _set_major_outfpaths(self):
         suffix = 'cleaned'
-        self.forward_major_outfpath = self._configure_outfpath(suffix, forward=True)
-        self.reverse_major_outfpath = self._configure_outfpath(suffix, forward=False)
-    # end def _set_major_outfpaths
+        self.major_forward_outfpath = self._configure_outfpath(suffix, forward=True)
+        self.major_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
+    # end def
 
     def _set_minor_outfpaths(self):
         suffix = 'minor_fragments'
-        self.forward_minor_outfpath = self._configure_outfpath(suffix, forward=True)
-        self.reverse_minor_outfpath = self._configure_outfpath(suffix, forward=False)
-    # end def _set_minor_outfpaths
+        self.minor_forward_outfpath = self._configure_outfpath(suffix, forward=True)
+        self.minor_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
+    # end def
 
-    def _set_trash_outfpaths(self):
-        suffix = 'trash'
-        self.forward_trash_outfpath = self._configure_outfpath(suffix, forward=True)
-        self.reverse_trash_outfpath = self._configure_outfpath(suffix, forward=False)
-    # end def _set_trash_outfpaths
+    def _set_abnormal_outfpaths(self):
+        suffix = 'abnormal'
+        self.abnormal_forward_outfpath = self._configure_outfpath(suffix, forward=True)
+        self.abnormal_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
+    # end def
+
+    def _set_unpaired_outfpaths(self):
+        suffix = 'unpaired'
+        self.unpaired_forward_outfpath = self._configure_outfpath(suffix, forward=True)
+        self.unpaired_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
+    # end def
 
     def _get_sample_name(self):
 
@@ -124,7 +135,7 @@ class PairedOutput:
             # end if
         # end for
         return sample_name
-    # end def _get_sample_from_fastq_basename
+    # end def
 
     def _configure_outfpath(self, suffix, forward=True):
         direction = 'R1_001' if forward else 'R2_001'
@@ -132,5 +143,5 @@ class PairedOutput:
             self.outdir,
             '{}_{}_{}.fastq'.format(self.sample_name, direction, suffix)
         )
-    # end def _configure_outfpath
-# end class UnpairedOutput
+    # end def
+# end class
