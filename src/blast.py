@@ -78,28 +78,6 @@ def check_program(program):
 # end def check_blastn
 
 
-# def check_blast_db(db_fpath):
-#     # Function checks if database passed to kromsatel is usable.
-#     # It checkis it with blastdbcmd.
-
-#     program = 'blastdbcmd'
-#     check_program(program)
-
-#     check_cmd = '{} -info -db {}'.format(program, db_fpath)
-
-#     # Check database with blastdbcmd
-#     pipe = sp.Popen(check_cmd, shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
-#     stdout_stderr = pipe.communicate()
-
-#     if pipe.returncode != 0:
-#         print('\nError: blast database at `{}` is not usable.'.format(db_fpath))
-#         print('Please, make it again.')
-#         print(stdout_stderr[1].decode('utf-8'))
-#         platf_depend_exit(pipe.returncode)
-#     # end if
-# # end def check_blast_db
-
-
 def _configure_makeblastdb_cmd(fasta_fpath, db_fpath):
     makeblastdb_cmd = ' '.join(
         [
@@ -192,7 +170,7 @@ def _configure_blastn_cmd(query_fpath, db_fpath, blast_task, alignment_fpath):
             '-db {}'.format(db_fpath),
             '-task {}'.format(blast_task),
             '-evalue 1e-3',
-            '-gapopen 2 -gapextend 2',
+            '-gapopen 3 -gapextend 1',
             '-max_hsps 1', '-max_target_seqs 1',
             '-outfmt {}'.format(outfmt),
             '> {}'.format(alignment_fpath),
@@ -206,14 +184,14 @@ def _configure_blastn_cmd(query_fpath, db_fpath, blast_task, alignment_fpath):
 def blast_align(reads_chunk, kromsatel_args):
 
     query_fpath = os.path.join(
-        kromsatel_args['outdir'],
+        kromsatel_args['tmp_dir'],
         'kromsatel_query_{}.fasta'.format(os.getpid())
     )
 
     src.fastq.write_fastq2fasta(reads_chunk, query_fpath)
 
     alignment_fpath = os.path.join(
-        kromsatel_args['outdir'],
+        kromsatel_args['tmp_dir'],
         'kromsatel_alignment_{}.json'.format(os.getpid())
     )
 

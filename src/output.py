@@ -37,12 +37,12 @@ class UnpairedOutput:
     # end def init_output
 
     def _set_major_outfpath(self):
-        suffix = 'cleaned'
+        suffix = 'major'
         self.major_outfpath = self._configure_outfpath(suffix)
     # end def _set_major_outfpath
 
     def _set_minor_outfpath(self):
-        suffix = 'minor_fragments'
+        suffix = 'minor'
         self.minor_outfpath = self._configure_outfpath(suffix)
     # end def _set_minor_outfpath
 
@@ -104,13 +104,13 @@ class PairedOutput:
     # end def
 
     def _set_major_outfpaths(self):
-        suffix = 'cleaned'
+        suffix = 'major'
         self.major_forward_outfpath = self._configure_outfpath(suffix, forward=True)
         self.major_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
     # end def
 
     def _set_minor_outfpaths(self):
-        suffix = 'minor_fragments'
+        suffix = 'minor'
         self.minor_forward_outfpath = self._configure_outfpath(suffix, forward=True)
         self.minor_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
     # end def

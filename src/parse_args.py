@@ -5,6 +5,7 @@ import sys
 import getopt
 
 import src.blast
+import src.filesystem as fs
 from src.printing import print_err
 from src.platform import platf_depend_exit
 
@@ -188,6 +189,9 @@ def handle_cl_args():
         kromsatel_args['reads_R2'] = None
         kromsatel_args['reads_unpaired'] = _get_first_element(kromsatel_args['reads_unpaired'])
     # end if
+
+    kromsatel_args['tmp_dir'] = os.path.join(kromsatel_args['outdir'], 'tmp')
+    fs.create_dir(kromsatel_args['tmp_dir'])
 
     return kromsatel_args
 # end def handle_cl_args

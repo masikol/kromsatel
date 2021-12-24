@@ -3,6 +3,7 @@
 
 import src.blast
 import src.output as out
+import src.filesystem as fs
 # import src.shredding
 import src.reads_cleaning as rcl
 import src.parse_args
@@ -40,15 +41,30 @@ def main():
     # print('Output file: `{}`'.format(outfpath))
     # print('-------')
 
+    _clean_tmp_files(args)
+
     print('\n{} - Completed.'.format(getwt()))
-# end def main
+# end def
 
 
-def _configure_output(args):
-    if args['paired_mode']:
-        output = out.PairedOutput(args)
+def _configure_output(kromsatel_args):
+    if kromsatel_args['paired_mode']:
+        output = out.PairedOutput(kromsatel_args)
     else:
-        output = out.UnpairedOutput(args)
+        output = out.UnpairedOutput(kromsatel_args)
     # end if
     return output
-# end def _configure_output
+# end def 
+
+
+def _clean_tmp_files(kromsatel_args):
+    fs.rm_tmp_dir(kromsatel_args['tmp_dir'])
+
+    # TODO:
+    # Uncomment. It is temporarily commented for debug purposes
+    # fs.rm_tmp_dir(
+    #     os.path.dirname(
+    #         kromsatel_args['db_fpath']
+    #     )
+    # )
+# end def

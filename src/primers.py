@@ -129,7 +129,7 @@ class PrimerScheme:
             # end for
         # end with
 
-        print('{} - Primers: annealing coordinates are found'.format(getwt()))
+        print('{} - Primers: found annealing coordinates'.format(getwt()))
 
         return primer_pairs
     # end def parse_primers
@@ -182,9 +182,9 @@ def _find_primer_anneal_coords(primer_seq, reference_seq, left=True, beg=0):
 
     # Widen primer annealing interval a bit in order not to
     #   misclassify minor alignments as abnormal ones due to single match
-    adapter_seq = 'AGATCGGAAGAGC'
     #   occured by sheer chance.
-    random_match_amendment = len(adapter_seq) # bp
+    random_match_amendment = 5 # bp
+
     if left:
         start = start - random_match_amendment
     else:
@@ -217,22 +217,3 @@ class Primer:
         self.end   = end   # 0-based, right-closed
     # end def __init__
 # end class Primer
-
-
-def primer_match(read_seq, primer_seq, max_mismatch_num=2):
-
-    num_mismatches = 0
-    min_mismatch_to_discard = max_mismatch_num + 1
-    local_iupac_dict = _IUPAC_DICT
-
-    for pos, primer_base in enumerate(primer_seq):
-        if not read_seq[pos] in local_iupac_dict[primer_base]:
-            num_mismatches += 1
-            if num_mismatches == min_mismatch_to_discard:
-                return None
-            # end if
-        # end if
-    # end for
-
-    return pos
-# end def primer_match

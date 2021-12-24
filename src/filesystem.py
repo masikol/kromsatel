@@ -2,6 +2,7 @@
 import re
 import os
 import gzip
+import shutil
 
 from src.printing import print_err
 from src.platform import platf_depend_exit
@@ -70,3 +71,13 @@ def create_dir(dirpath):
         # end try
     # end if
 # end def create_dir
+
+
+def rm_tmp_dir(dirpath):
+    try:
+        shutil.rmtree(dirpath)
+    except OSError as err:
+        print_err('\nWarning: cannot remove temporary directory `{}`'.format(dirpath))
+        print_err(str(err))
+    # end try
+# end def
