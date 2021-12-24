@@ -30,7 +30,7 @@ class ReadsCleaner:
 
         self.MIN_LEN = args['min_len']
         self.threads = args['n_thr']
-        self.FIXED_CROP_LEN = 27 # bp
+        self.FIXED_CROP_LEN = args['fixed_crop_len']
 
         num_reads_total = self._count_reads()
 

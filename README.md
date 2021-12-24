@@ -63,24 +63,28 @@ Input:
 
 Output:
 
--o (--outdir) -- output directory.
-    Default value is './kromsatel_output'
+  -o (--outdir) -- output directory.
+      Default value is './kromsatel_output'
 
 Miscellaneous:
 
--t (--threads) -- number of threads to launch.
-    Default: 1 thread.
+  -t (--threads) -- number of threads to launch.
+      Default: 1 thread.
 
--m (--min-len) -- minimum length of an output read.
-    Default: 25 bp.
+  -m (--min-len) -- minimum length of an output read.
+      Default: 25 bp.
 
--a (--blast-task) -- BLASTn task to launch.
-    Allowed values: 'megablast', 'dc-megablast', 'blastn'.
-    Default is 'megablast'.
+  -k (--blast-task) -- BLASTn task to launch.
+      Allowed values: 'megablast', 'dc-megablast', 'blastn'.
+      Default is 'megablast'.
 
--c (--chunk-size) -- number of reads to blast within a single query.
-    The larger is the chunk size, the higher is the memory consumption.
-    Default: 1000 reads.
+  -c (--chunk-size) -- number of reads to blast within a single query.
+      The larger is the chunk size, the higher is the memory consumption.
+      Default: 1000 reads.
+
+  --crop-len -- number of nucleotides to crop from end of reads
+      originating from a non-specific amplicon.
+      Default: 27 bp.
 ```
 
 ### Examples

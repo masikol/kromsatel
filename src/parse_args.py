@@ -15,12 +15,13 @@ def handle_cl_args():
 
     # Get arguments
     try:
-        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hv1:2:u:p:r:t:c:m:a:o:',
+        opts, args = getopt.gnu_getopt(sys.argv[1:], 'hv1:2:u:p:r:t:c:m:k:o:',
             [
                 'help', 'version',
                 'reads-R1=', 'reads-R2=', 'reads-unpaired=',
                 'primers=', 'reference=',
                 'threads=', 'chunk-size=', 'min-len=', 'blast-task=',
+                'crop-len='
                 'outdir=',
             ]
         )
@@ -40,6 +41,7 @@ def handle_cl_args():
         'chunk_size': 1000,        # reads
         'min_len': 25,             # minimum length of an output read (bp)
         'blast_task': 'megablast', # variant of BLAST algorithm
+        'fixed_crop_len': 27,      # size of sequence to crop from reads of non-specific amplicons
         'outdir': os.path.join(    # output directory
             os.getcwd(),
             'kromsatel_output'
@@ -140,7 +142,7 @@ def handle_cl_args():
                     raise ValueError
                 # end if
             except ValueError:
-                print_err('\nInvalid minimum length of a result read passed with the option `{}`: {}'\
+                print_err('\nInvalid value passed with the option `{}`: {}'\
                     .format(opt, arg))
                 print_err('It must be integer number > 0.')
                 platf_depend_exit(1)
@@ -153,6 +155,19 @@ def handle_cl_args():
                 platf_depend_exit(1)
             # end if
             kromsatel_args['blast_task'] = arg
+
+        elif opt == '--crop-len':
+            try:
+                kromsatel_args['fixed_crop_len'] = int(arg)
+                if kromsatel_args['fixed_crop_len'] < 0:
+                    raise ValueError
+                # end if
+            except ValueError:
+                print_err('\nInvalid value passed with the option `{}`: {}'\
+                    .format(opt, arg))
+                print_err('It must be integer number >= 0.')
+                platf_depend_exit(1)
+            # end try
 
         elif opt in ('-o', '--outdir'):
             kromsatel_args['outdir'] = os.path.abspath(arg)
