@@ -4,9 +4,9 @@ import gzip
 from src.fastq import write_fastq_record
 
 
-MAJOR            = 0
-MINOR            = 1
-ABNORMAL         = 2
+MAJOR        = 0
+MINOR        = 1
+NON_SPECIFIC = 2
 
 
 class PairedBinner:
@@ -21,8 +21,8 @@ class PairedBinner:
         self.minor_forward_reads = list()
         self.minor_reverse_reads = list()
 
-        self.abnormal_forward_reads = list()
-        self.abnormal_reverse_reads = list()
+        self.non_specific_forward_reads = list()
+        self.non_specific_reverse_reads = list()
 
         self.unpaired_forward_reads = list()
         self.unpaired_reverse_reads = list()
@@ -38,9 +38,9 @@ class PairedBinner:
         self.minor_reverse_reads.append(reverse_read)
     # end def
 
-    def add_abnormal_pair(self, forward_read, reverse_read):
-        self.abnormal_forward_reads.append(forward_read)
-        self.abnormal_reverse_reads.append(reverse_read)
+    def add_non_specific_pair(self, forward_read, reverse_read):
+        self.non_specific_forward_reads.append(forward_read)
+        self.non_specific_reverse_reads.append(reverse_read)
     # end def
 
     def add_forward_unpaired_read(self, read):
@@ -54,17 +54,17 @@ class PairedBinner:
     def write_binned_reads(self):
 
         outfpaths = (
-            self.output.major_forward_outfpath,    self.output.major_reverse_outfpath,
-            self.output.minor_forward_outfpath,    self.output.minor_reverse_outfpath,
-            self.output.abnormal_forward_outfpath, self.output.abnormal_reverse_outfpath,
+            self.output.major_forward_outfpath,        self.output.major_reverse_outfpath,
+            self.output.minor_forward_outfpath,        self.output.minor_reverse_outfpath,
+            self.output.non_specific_forward_outfpath, self.output.non_specific_reverse_outfpath,
             self.output.unpaired_forward_outfpath,
             self.output.unpaired_reverse_outfpath,
         )
 
         read_collections = (
-            self.major_forward_reads,    self.major_reverse_reads,
-            self.minor_forward_reads,    self.minor_reverse_reads,
-            self.abnormal_forward_reads, self.abnormal_reverse_reads,
+            self.major_forward_reads,        self.major_reverse_reads,
+            self.minor_forward_reads,        self.minor_reverse_reads,
+            self.non_specific_forward_reads, self.non_specific_reverse_reads,
             self.unpaired_forward_reads,
             self.unpaired_reverse_reads,
         )

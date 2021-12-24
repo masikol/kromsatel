@@ -16,8 +16,8 @@ class UnpairedOutput:
         self._set_major_outfpath()
         self.minor_outfpath = None
         self._set_minor_outfpath()
-        self.abnormal_outfpath = None
-        self._set_abnormal_outfpath()
+        self.non_specific_outfpath = None
+        self._set_non_specific_outfpath()
 
         self._init_output()
     # end def __init__
@@ -29,7 +29,7 @@ class UnpairedOutput:
         output_fpaths = (
             self.major_outfpath,
             self.minor_outfpath,
-            self.abnormal_outfpath,
+            self.non_specific_outfpath,
         )
         for outfpath in output_fpaths:
             fs.init_file(outfpath)
@@ -46,10 +46,10 @@ class UnpairedOutput:
         self.minor_outfpath = self._configure_outfpath(suffix)
     # end def _set_minor_outfpath
 
-    def _set_abnormal_outfpath(self):
-        suffix = 'abnormal'
-        self.abnormal_outfpath = self._configure_outfpath(suffix)
-    # end def _set_abnormal_outfpath
+    def _set_non_specific_outfpath(self):
+        suffix = 'non_specific'
+        self.non_specific_outfpath = self._configure_outfpath(suffix)
+    # end def _set_non_specific_outfpath
 
     def _configure_outfpath(self, suffix):
         return os.path.join(
@@ -75,9 +75,9 @@ class PairedOutput:
         self.minor_forward_outfpath = None
         self.minor_reverse_outfpath = None
         self._set_minor_outfpaths()
-        self.abnormal_forward_outfpath = None
-        self.abnormal_reverse_outfpath = None
-        self._set_abnormal_outfpaths()
+        self.non_specific_forward_outfpath = None
+        self.non_specific_reverse_outfpath = None
+        self._set_non_specific_outfpaths()
         self.unpaired_forward_outfpath = None
         self.unpaired_reverse_outfpath = None
         self._set_unpaired_outfpaths()
@@ -93,8 +93,8 @@ class PairedOutput:
             self.major_reverse_outfpath,
             self.minor_forward_outfpath,
             self.minor_reverse_outfpath,
-            self.abnormal_forward_outfpath,
-            self.abnormal_reverse_outfpath,
+            self.non_specific_forward_outfpath,
+            self.non_specific_reverse_outfpath,
             self.unpaired_forward_outfpath,
             self.unpaired_reverse_outfpath,
         )
@@ -115,10 +115,10 @@ class PairedOutput:
         self.minor_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
     # end def
 
-    def _set_abnormal_outfpaths(self):
-        suffix = 'abnormal'
-        self.abnormal_forward_outfpath = self._configure_outfpath(suffix, forward=True)
-        self.abnormal_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
+    def _set_non_specific_outfpaths(self):
+        suffix = 'non-specific'
+        self.non_specific_forward_outfpath = self._configure_outfpath(suffix, forward=True)
+        self.non_specific_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
     # end def
 
     def _set_unpaired_outfpaths(self):

@@ -36,15 +36,14 @@ class Alignment:
         hsp = search_result['hits'][0]['hsps'][0]
 
         self.query_name = search_result['query_title']
-        # self.align_len = hsp['align_len']
 
-        self.query_start = hsp['query_from'] - 1 # 1-based to 0-based
-        self.query_end   = hsp[ 'query_to' ] - 1 # 1-based to 0-based
+        self.query_from = hsp['query_from'] - 1 # 1-based to 0-based
+        self.query_to   = hsp[ 'query_to' ] - 1 # 1-based to 0-based
 
-        self.ref_start = hsp['hit_from'] - 1     # 1-based to 0-based
-        self.ref_end   = hsp[ 'hit_to' ] - 1     # 1-based to 0-based
+        self.ref_from   = hsp[ 'hit_from' ] - 1 # 1-based to 0-based
+        self.ref_to     = hsp[  'hit_to'  ] - 1 # 1-based to 0-based
 
-        # Temporarily disabled
+        # TODO: Temporarily disabled
         # self.query_gap_locations = _find_gap_locations(hsp['qseq'])
         # self.ref_gap_locations = _find_gap_locations(hsp['hseq'])
 
@@ -53,14 +52,14 @@ class Alignment:
         self.align_strand_plus = query_strand_plus and ref_strand_plus
 
         # If strand is minus, swap reference alignment coordinates
-        #   so that `ref_start` < `ref_end`
+        #   so that `ref_from` < `ref_to`
         if not self.align_strand_plus:
-            self.ref_start, self.ref_end = self.ref_end, self.ref_start
+            self.ref_from, self.ref_to = self.ref_to, self.ref_from
         # end if
     # end def
 
     def get_align_len(self):
-        return max(0, self.ref_end - self.ref_start)
+        return max(0, self.ref_to - self.ref_from)
     # end def
 
     def __repr__(self):
@@ -68,10 +67,10 @@ class Alignment:
         return '{}\nQ:[{}-{}];R:[{}-{}];({})' \
             .format(
                 self.query_name,
-                self.query_start,
-                self.query_end,
-                self.ref_start,
-                self.ref_end,
+                self.query_from,
+                self.query_to,
+                self.ref_from,
+                self.ref_to,
                 '+' if self.align_strand_plus else '-'#,
                 # self.query_gap_locations,
                 # self.ref_gap_locations
