@@ -1,4 +1,6 @@
 
+import gzip
+
 from src.fastq import write_fastq_record
 
 
@@ -75,7 +77,7 @@ class PairedBinner:
     # end def
 
     def _append_to_outfile(self, reads, outfpath):
-        with open(outfpath, 'at') as outfile:
+        with gzip.open(outfpath, 'at') as outfile:
             for read in reads:
                 write_fastq_record(read, outfile)
             # end for

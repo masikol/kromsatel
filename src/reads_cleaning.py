@@ -6,7 +6,7 @@ import multiprocessing as mp
 
 import src.fastq
 import src.primers as prm
-from src.printing import getwt
+from src.printing import getwt, print_err
 from src.alignment import parse_alignments, Alignment
 
 from src.binning import PairedBinner
@@ -40,6 +40,13 @@ class ReadsCleaner:
 
 
     def clean_reads(self):
+
+        # TODO
+        # Unpaired mode
+        if not self.args['paired_mode']:
+            print_err('\nError: unpaired mode is not supported yet. :(')
+            return
+        # end if
 
         reads_chunks = self._choose_fastq_chunks_func()
 

@@ -141,7 +141,7 @@ class PairedOutput:
         direction = 'R1_001' if forward else 'R2_001'
         return os.path.join(
             self.outdir,
-            '{}_{}_{}.fastq'.format(self.sample_name, direction, suffix)
+            '{}_{}_{}.fastq.gz'.format(self.sample_name, direction, suffix)
         )
     # end def
 # end class
