@@ -1,8 +1,10 @@
-## kromsatel
+# kromsatel
 
 Current version is `1.7.a_dev` (2021-XX-XX edition).
 
-### Description (TODO: depracated)
+## Description (TODO: depracated)
+
+Deprecation notice: now kromsatel can process only Illumina paired-end reads.
 
 Kromsatel is a script for preprocessing raw reads obtained using [ARTIC's protocol](https://artic.network/ncov-2019) for sequencing SARS-CoV-2 genome. Here, "preprocessing" stands for splitting chimeric reads into consistent fragments according to primer scheme described in the [protocol](https://artic.network/ncov-2019) (or according to your own primer scheme).
 
@@ -18,28 +20,22 @@ Brief description of the algorithm:
 
 1. **Python 3** (https://www.python.org/). The script is tested on Python interpreter version 3.8.5.
 
-  The script is written in Python 3X and won't work on Python 2X.
+  The script is written in Python 3 and won't work on Python 2.
 
 2. **BLAST+** toolkit.
 
-   It can be downloaded here: ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/
+   It can be downloaded [here](http://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/).
 
-   **Installation:**
+   BLAST+ Installation:
 
    - Linux: download tarball, unpack it and add `bin/` directory from unpacked tree to `PATH` variable.
      (this should also work for macOS)
 
-   "kromsatel" has been tested on Linux with BLAST+ version 2.12.0+.
+   Kromsatel has been tested on Linux with BLAST+ version 2.12.0+.
 
-### Usage
+## Usage
 
-#### Basic usage
-
-```
-./kromsatel.py -d <DATABASE_PATH>
-```
-
-#### Arguments
+### Arguments
 
 Mandatory arguments are marked with `*`.
 
@@ -68,9 +64,9 @@ Input:
 Output:
 
 -o (--outdir) -- output directory.
-    Default value is ./kromsatel_output
+    Default value is './kromsatel_output'
 
-Miscellaneaous:
+Miscellaneous:
 
 -t (--threads) -- number of threads to launch.
     Default: 1 thread.
@@ -87,50 +83,21 @@ Miscellaneaous:
     Default: 1000 reads.
 ```
 
-#### Examples
-```
-./kromsatel.py corona_reads.fastq \
-  -d nCoV-2019_database/nCoV-2019_amplicons \
-  -p primers/nCov-2019_primers.csv \
-  -t 4 --am 150
-```
-
-And two commands together, for clarity:
-
-Create database:
-
-`bash db-scripts/make-db.sh nCoV-2019_amplicons.fasta nCoV-2019_database`
-
-Run kromsatel
-
-```
-./kromsatel.py corona_reads.fastq \
-  -d nCoV-2019_database/nCoV-2019_amplicons \
-  -p primers/nCov-2019_primers.csv
-```
-
-You can pass multiple fastq files to kromsatel, like this:
-
+### Examples
 ```
 ./kromsatel.py \
-  corona_reads_1.fastq corona_reads_2.fastq \
-  -d nCoV-2019_database/nCoV-2019_amplicons \
-  -p primers/nCov-2019_primers.csv
+    -1 20_S30_L001_R1_001.fastq.gz \
+    -2 20_S30_L001_R2_001.fastq.gz \
+    -p primers/nCov-2019_primers.csv \
+    -r reference/Wuhan-Hu-1-compele-genome.fasta \
+    -o 20_s30_outdir
 ```
 
-Or you can use wildcards (this will process all `.fastq.gz` file in directory `reads_dir`):
+## Output files
 
-```
-./kromsatel.py reads_dir/*.fastq.gz \
-  -d nCoV-2019_database/nCoV-2019_amplicons \
-  -p primers/nCov-2019_primers.csv
-```
+TODO
 
-### Output files
-
-For the example above, output file will have name `corona_reads_cleaned.fastq` and will be located is the same directory as `corona_reads.fastq`.
-
-#### Read names
+### Read names (TODO: deprecated)
 
 In output file, reads are named in following way:
 
