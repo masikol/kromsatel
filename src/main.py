@@ -22,28 +22,24 @@ def main():
         src.blast.check_program(ncbi_program)
     # end for
 
-    # print(args)
-
     args['output'] = _configure_output(args)
 
     args['db_fpath'] = src.blast.create_reference_database(args)
 
     print('{} - Start.'.format(getwt()))
 
-    reads_cleaner = rcl.ReadsCleaner(args)
-    # for i, x in enumerate(reads_cleaner.primer_scheme.primer_pairs):
-    #     print(i, x)
-    # return
+    if args['paired_mode']:
+        reads_cleaner = rcl.PairedReadsCleaner(args)
+    else:
+        reads_cleaner = rcl.UnpairedReadsCleaner(args)
+    # end if
 
     reads_cleaner.clean_reads()
-
-    # print('{} - File `{}` is processed.'.format(getwt(), fq_fpath))
-    # print('Output file: `{}`'.format(outfpath))
-    # print('-------')
 
     _clean_tmp_files(args)
 
     print('\n{} - Completed.'.format(getwt()))
+    print('  Output directory: `{}`'.format(args['outdir']))
 # end def
 
 

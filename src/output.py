@@ -54,7 +54,7 @@ class UnpairedOutput:
     def _configure_outfpath(self, suffix):
         return os.path.join(
             self.outdir,
-            '{}_{}.fastq'.format(self.input_basename, suffix)
+            '{}_{}.fastq.gz'.format(self.input_basename, suffix)
         )
     # end def _configure_outfpath
 # end class UnpairedOutput
@@ -116,7 +116,7 @@ class PairedOutput:
     # end def
 
     def _set_non_specific_outfpaths(self):
-        suffix = 'non-specific'
+        suffix = 'non_specific'
         self.non_specific_forward_outfpath = self._configure_outfpath(suffix, forward=True)
         self.non_specific_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
     # end def

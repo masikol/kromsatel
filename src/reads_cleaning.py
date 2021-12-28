@@ -9,11 +9,13 @@ import src.primers as prm
 from src.progress import Progress
 import src.synchronization as synchron
 from src.printing import getwt, print_err
-from src.alignment import parse_alignments, Alignment
+from src.alignment import parse_alignments_illumina, parse_alignments_nanopore, Alignment
 
-from src.binning import PairedBinner
+from src.binning import UnpairedBinner, PairedBinner
 from src.binning import MAJOR, MINOR, NON_SPECIFIC
 
+
+import time
 
 
 class ReadsCleaner:
@@ -25,30 +27,39 @@ class ReadsCleaner:
         self.threads = args['n_thr']
         self.FIXED_CROP_LEN = args['fixed_crop_len']
 
-        num_reads_total = self._count_reads()
-
         self.primer_scheme = prm.PrimerScheme(args)
+    # end def
+
+    def clean_reads(self):
+        raise NotImplementedError
+    # end def
+# end class
+
+
+
+class UnpairedReadsCleaner(ReadsCleaner):
+
+    def __init__(self, args):
+        super().__init__(args)
+        num_reads_total = self._count_reads()
         self.progress = Progress(num_reads_total)
-    # end def __init__
+    # end def
 
 
     def clean_reads(self):
 
-        # TODO
-        # Unpaired mode
-        if not self.args['paired_mode']:
-            print_err('\nError: unpaired mode is not supported yet. :(')
-            return
-        # end if
-
-        reads_chunks = self._choose_fastq_chunks_func()
+        reads_chunks = functools.partial(
+            src.fastq.fastq_chunks_unpaired,
+            fq_fpath=self.args['reads_unpaired'],
+            chunk_size=self.args['chunk_size']
+        )
 
         self.progress.print_status_bar()
 
         # Proceed
         with mp.Pool(self.threads) as pool:
             pool.starmap(
-                self._clean_reads_chunk_paired,
+                self._clean_unpaired_chunk,
                 (
                     (reads_chunk,) for reads_chunk in reads_chunks()
                 )
@@ -59,18 +70,331 @@ class ReadsCleaner:
         pool.join()
 
         self.progress.print_status_bar()
+        print()
     # end def clean_reads
 
 
-    def _clean_reads_chunk_paired(self, reads_chunk):
+    def _clean_unpaired_chunk(self, reads_chunk):
+        alignments = parse_alignments_nanopore(
+            src.blast.blast_align(reads_chunk, self.args)
+        )
+
+        binner = UnpairedBinner(self.args['output'])
+
+
+        for read in reads_chunk:
+
+            read_alignments = alignments[read['seq_id']]
+
+            if len(read_alignments) == 0:
+                continue
+            # end if
+
+            non_ovl_query_spans = list()
+
+            for alignment in read_alignments:
+
+                alignment_overlaps = self._check_overlap(alignment, non_ovl_query_spans)
+                if alignment_overlaps:
+                    continue
+                # end if
+
+                left_orientation = alignment.align_strand_plus
+
+                classification = NON_SPECIFIC
+
+                read_survives = False
+
+                start_primer_num = None
+                end_primer_num = None
+
+                read_start_coord = self._get_read_start_coord(alignment)
+                read_end_coord   = self._get_read_end_coord(alignment)
+
+                start_primer_num = self._search_start_primer_bruteforce(
+                    read_start_coord,
+                    left=left_orientation
+                )
+                start_primer_found = not (start_primer_num is None)
+
+                if start_primer_found:
+
+                    end_major = \
+                        self.primer_scheme.check_coord_within_primer(
+                            read_end_coord,
+                            start_primer_num,
+                            left=(not left_orientation)
+                        )
+
+                    if end_major:
+                        classification = MAJOR
+                        end_primer_num = start_primer_num
+                    else:
+                        minor_pair_primer_num = start_primer_num + (-1 if left_orientation else 1)
+                        end_minor = \
+                            self.primer_scheme.check_coord_within_primer(
+                                read_end_coord,
+                                minor_pair_primer_num,
+                                left=(not left_orientation)
+                            )
+                        if end_minor:
+                            classification = MINOR
+                            end_primer_num = minor_pair_primer_num
+                        # end if
+                    # end if
+                else:
+                    end_primer_num = self._search_start_primer_bruteforce(
+                        read_end_coord,
+                        left_orientation
+                    )
+                # end if
+
+                alignment = self._trim_aligment(
+                    alignment,
+                    start_primer_num,
+                    end_primer_num,
+                    left_orientation
+                )
+
+                trimmed_align_len = alignment.get_align_len()
+
+                read_survives = trimmed_align_len >= self.MIN_LEN
+
+                if read_survives:
+                    # read['seq_id'] += '_'+str(alignment.query_from)
+                    read = self._trim_read(read, alignment)
+
+                    # Binning
+                    if classification == MAJOR:
+                        binner.add_major_read(read)
+                    elif classification == MINOR:
+                        binner.add_minor_read(read)
+                    else:
+                        binner.add_non_specific_read(read)
+                    # end if
+                # end if
+            # end for
+
+        # end for
+
+        increment = len(reads_chunk)
+        self._write_output_and_print_progress(binner, increment)
+    # end def
+
+
+    def _write_output_and_print_progress(self, binner, increment):
+
+        with synchron.output_lock:
+            binner.write_binned_reads()
+        # end with
+
+        with synchron.status_update_lock:
+
+            prev_next_value = self.progress.get_next_report_num()
+            self.progress.increment_done(increment)
+            self.progress.increment_next_report()
+
+            if self.progress.get_next_report_num() != prev_next_value:
+                with synchron.print_lock:
+                    self.progress.print_status_bar()
+                # end with
+            # end if
+        # end with
+    # end def
+
+
+    def _check_overlap(self, aligment, non_ovl_query_spans):
+        for span in non_ovl_query_spans:
+            span_from = non_ovl_query_spans[0]
+            span_to   = non_ovl_query_spans[1]
+            if span_from <= aligment.query_from <= span_to:
+                return True
+            # end if
+            if span_from <= aligment.query_to   <= span_to:
+                return True
+            # end if
+        # end for
+        return False
+    # end def
+
+
+    def _count_reads(self):
+        print('{} - Counting reads...'.format(getwt()))
+        num_reads_total = src.fastq.count_reads(self.args['reads_unpaired'])
+        print('{} - {} reads.'.format(getwt(), num_reads_total))
+        return num_reads_total
+    # end def
+
+    def _get_read_start_coord(self, alignment):
+        if alignment.align_strand_plus:
+            return alignment.ref_from
+        else:
+            return alignment.ref_to
+        # end if
+    # end def
+
+    def _get_read_end_coord(self, alignment):
+        if alignment.align_strand_plus:
+            return alignment.ref_to
+        else:
+            return alignment.ref_from
+        # end if
+    # end def
+
+    def _search_start_primer_bruteforce(self, start_coord, left=True):
+        if left:
+            start_primer_num = \
+                self.primer_scheme.find_left_primer_by_coord(
+                    start_coord
+                )
+        else:
+            start_primer_num = \
+                self.primer_scheme.find_right_primer_by_coord(
+                    start_coord
+                )
+        # end if
+        return start_primer_num
+    # end def
+
+    def _trim_aligment(self, alignment, start_primer_num, end_primer_num, left=True):
+
+        if not start_primer_num is None:
+            alignment = self._trim_start_primer(alignment, start_primer_num, left)
+        else:
+            alignment = self._crop_start(alignment)
+        # end if
+
+        right = not left
+        if not end_primer_num is None:
+            alignment = self._trim_end_primer(alignment, end_primer_num, right)
+        else:
+            alignment = self._crop_end(alignment)
+        # end if
+
+        return alignment
+    # end def
+
+    def _crop_start(self, alignment):
+        if alignment.align_strand_plus:
+            alignment.ref_from += self.FIXED_CROP_LEN
+            alignment.query_from += self.FIXED_CROP_LEN
+        else:
+            alignment.ref_to -= self.FIXED_CROP_LEN
+            alignment.query_from += self.FIXED_CROP_LEN
+        # end if
+        return alignment
+    # end def
+
+    def _crop_end(self, alignment):
+        if alignment.align_strand_plus:
+            alignment.ref_to -= self.FIXED_CROP_LEN
+            alignment.query_to -= self.FIXED_CROP_LEN
+        else:
+            alignment.ref_from += self.FIXED_CROP_LEN
+            alignment.query_to -= self.FIXED_CROP_LEN
+        # end if
+        return alignment
+    # end def
+
+
+    def _trim_start_primer(self, alignment, primer_num, left=True):
+        if left:
+            primer = self.primer_scheme.primer_pairs[primer_num].left_primer
+        else:
+            primer = self.primer_scheme.primer_pairs[primer_num].right_primer
+        # end if
+
+        if alignment.align_strand_plus:
+            primer_len_in_read = primer.end - alignment.ref_from + 1
+            alignment.ref_from += primer_len_in_read
+            alignment.query_from += primer_len_in_read
+        else:
+            primer_len_in_read = alignment.ref_to - primer.start + 1
+            alignment.ref_to -= primer_len_in_read
+            alignment.query_from += primer_len_in_read
+        # end if
+
+        return alignment
+    # end def
+
+    def _trim_end_primer(self, alignment, primer_num, left=True):
+        if left:
+            primer = self.primer_scheme.primer_pairs[primer_num].left_primer
+        else:
+            primer = self.primer_scheme.primer_pairs[primer_num].right_primer
+        # end if
+
+        if alignment.align_strand_plus:
+            primer_len_in_read = alignment.ref_to - primer.start + 1
+            alignment.ref_to -= primer_len_in_read
+            alignment.query_to -= primer_len_in_read
+        else:
+            primer_len_in_read = primer.end - alignment.ref_from + 1
+            alignment.ref_from += primer_len_in_read
+            alignment.query_to -= primer_len_in_read
+        # end if
+
+        return alignment
+    # end def
+
+    def _trim_read(self, read, alignment):
+        new_start, new_end = alignment.query_from, alignment.query_to+1
+        read['seq']  = read['seq'] [new_start : new_end]
+        read['qual'] = read['qual'][new_start : new_end]
+        return read
+    # end def
+
+# end class
+
+
+
+class PairedReadsCleaner(ReadsCleaner):
+
+    def __init__(self, args):
+        super().__init__(args)
+        num_reads_total = self._count_reads()
+        self.progress = Progress(num_reads_total)
+    # end def
+
+
+    def clean_reads(self):
+
+        reads_chunks = functools.partial(
+            src.fastq.fastq_chunks_paired,
+            forward_read_fpath=self.args['reads_R1'],
+            reverse_read_fpath=self.args['reads_R2'],
+            chunk_size=self.args['chunk_size']
+        )
+
+        self.progress.print_status_bar()
+
+        # Proceed
+        with mp.Pool(self.threads) as pool:
+            pool.starmap(
+                self._clean_paired_chunk,
+                (
+                    (reads_chunk,) for reads_chunk in reads_chunks()
+                )
+            )
+        # end with
+
+        pool.close()
+        pool.join()
+
+        self.progress.print_status_bar()
+        print()
+    # end def
+
+
+    def _clean_paired_chunk(self, reads_chunk):
 
         forward_chunk = reads_chunk[0]
-        forward_alignments = parse_alignments(
+        forward_alignments = parse_alignments_illumina(
             src.blast.blast_align(forward_chunk, self.args)
         )
 
         reverse_chunk = reads_chunk[1]
-        reverse_alignments = parse_alignments(
+        reverse_alignments = parse_alignments_illumina(
             src.blast.blast_align(reverse_chunk, self.args)
         )
 
@@ -209,13 +533,23 @@ class ReadsCleaner:
             # end if
         # end for
 
+        increment = len(forward_chunk)
+        self._write_output_and_print_progress(binner, increment)
+    # end def
+
+
+    def _write_output_and_print_progress(self, binner, increment):
+
         with synchron.output_lock:
             binner.write_binned_reads()
         # end with
+
         with synchron.status_update_lock:
+
             prev_next_value = self.progress.get_next_report_num()
-            self.progress.increment_done(len(forward_chunk))
+            self.progress.increment_done(increment)
             self.progress.increment_next_report()
+
             if self.progress.get_next_report_num() != prev_next_value:
                 with synchron.print_lock:
                     self.progress.print_status_bar()
@@ -353,31 +687,8 @@ class ReadsCleaner:
 
     def _count_reads(self):
         print('{} - Counting reads...'.format(getwt()))
-        if self.args['paired_mode']:
-            num_reads_total = src.fastq.count_reads(self.args['reads_R1'])
-        else:
-            num_reads_total = src.fastq.count_reads(self.args['reads_unpaired'])
-        # end if
-        print('{} - {} reads.'.format(getwt(), num_reads_total))
+        num_reads_total = src.fastq.count_reads(self.args['reads_R1'])
+        print('{} - {} read pairs.'.format(getwt(), num_reads_total))
         return num_reads_total
-    # end def _count_reads
-
-
-    def _choose_fastq_chunks_func(self):
-        if self.args['paired_mode']:
-            fastq_chunks = functools.partial(
-                src.fastq.fastq_chunks_paired,
-                forward_read_fpath=self.args['reads_R1'],
-                reverse_read_fpath=self.args['reads_R2'],
-                chunk_size=self.args['chunk_size']
-            )
-        else:
-            fastq_chunks = functools.partial(
-                src.fastq.fastq_chunks_unpaired,
-                fq_fpath=self.args['reads_unpaired'],
-                chunk_size=self.args['chunk_size']
-            )
-        # end if
-        return fastq_chunks
-    # end def _choose_fastq_chunks_func
+    # end def
 # end class

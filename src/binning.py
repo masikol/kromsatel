@@ -9,6 +9,60 @@ MINOR        = 1
 NON_SPECIFIC = 2
 
 
+class UnpairedBinner:
+
+    def __init__(self, unpaired_output):
+
+        self.output = unpaired_output
+
+        self.major_reads = list()
+        self.minor_reads = list()
+        self.non_specific_reads = list()
+    # end def
+
+    def add_major_read(self, read):
+        self.major_reads.append(read)
+    # end def
+
+    def add_minor_read(self, read):
+        self.minor_reads.append(read)
+    # end def
+
+    def add_non_specific_read(self, read):
+        self.non_specific_reads.append(read)
+    # end def
+
+    def write_binned_reads(self):
+
+        outfpaths = (
+            self.output.major_outfpath,
+            self.output.minor_outfpath,
+            self.output.non_specific_outfpath,
+        )
+
+        read_collections = (
+            self.major_reads,
+            self.minor_reads,
+            self.non_specific_reads,
+        )
+
+        for outfpath, reads in zip(outfpaths, read_collections):
+            if len(reads) != 0:
+                self._append_to_outfile(reads, outfpath)
+            # end if
+        # end for
+    # end def
+
+    def _append_to_outfile(self, reads, outfpath):
+        with gzip.open(outfpath, 'at') as outfile:
+            for read in reads:
+                write_fastq_record(read, outfile)
+            # end for
+        # end with
+    # end def
+# end class
+
+
 class PairedBinner:
 
     def __init__(self, paired_output):

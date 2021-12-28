@@ -106,7 +106,6 @@ def _configure_makembindex_cmd(db_fpath):
 # end def
 
 
-
 def create_reference_database(kromsatel_args):
 
     db_dirpath = os.path.join(kromsatel_args['outdir'], 'blast_database')
@@ -159,7 +158,7 @@ def _index_database(db_fpath):
 # end def
 
 
-def _configure_blastn_cmd(query_fpath, db_fpath, blast_task, alignment_fpath):
+def _configure_blastn_cmd_illumina(query_fpath, db_fpath, blast_task, alignment_fpath):
 
     outfmt = 15 # Single-file BLAST JSON
 
@@ -172,6 +171,27 @@ def _configure_blastn_cmd(query_fpath, db_fpath, blast_task, alignment_fpath):
             '-evalue 1e-3',
             '-gapopen 3 -gapextend 1',
             '-max_hsps 1', '-max_target_seqs 1',
+            '-outfmt {}'.format(outfmt),
+            '> {}'.format(alignment_fpath),
+        ]
+    )
+
+    return blast_cmd
+# end def
+
+
+def _configure_blastn_cmd_nanopore(query_fpath, db_fpath, blast_task, alignment_fpath):
+
+    outfmt = 15 # Single-file BLAST JSON
+
+    blast_cmd = ' '.join(
+        [
+            'blastn',
+            '-query {}'.format(query_fpath),
+            '-db {}'.format(db_fpath),
+            '-task {}'.format(blast_task),
+            '-evalue 1e-3',
+            '-max_hsps 3', '-max_target_seqs 1',
             '-outfmt {}'.format(outfmt),
             '> {}'.format(alignment_fpath),
         ]
@@ -195,12 +215,21 @@ def blast_align(reads_chunk, kromsatel_args):
         'kromsatel_alignment_{}.json'.format(os.getpid())
     )
 
-    blast_cmd = _configure_blastn_cmd(
-        query_fpath,
-        kromsatel_args['db_fpath'],
-        kromsatel_args['blast_task'],
-        alignment_fpath
-    )
+    if kromsatel_args['paired_mode']:
+        blast_cmd = _configure_blastn_cmd_illumina(
+            query_fpath,
+            kromsatel_args['db_fpath'],
+            kromsatel_args['blast_task'],
+            alignment_fpath
+        )
+    else:
+        blast_cmd = _configure_blastn_cmd_nanopore(
+            query_fpath,
+            kromsatel_args['db_fpath'],
+            kromsatel_args['blast_task'],
+            alignment_fpath
+        )
+    # end if
 
     # Launch blastn
     pipe = sp.Popen(blast_cmd, shell=True, stderr=sp.PIPE)
@@ -218,7 +247,7 @@ def blast_align(reads_chunk, kromsatel_args):
         aligmnents = json.load(alignment_file)
     # end with
 
-    fs.rm_temp_file(alignment_fpath)
+    # fs.rm_temp_file(alignment_fpath)
 
     return aligmnents['BlastOutput2']
 # end def blast_align

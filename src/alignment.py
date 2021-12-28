@@ -2,40 +2,70 @@
 import re
 
 
-def parse_alignments(raw_alignments):
+def parse_alignments_illumina(raw_alignments):
 
     alignments = dict()
 
     for raw_alignment_obj in raw_alignments:
         query_name = raw_alignment_obj['report']['results']['search']['query_title']
-        alignments[query_name] = parse_single_alignment(raw_alignment_obj['report'])
+        alignments[query_name] = parse_single_hsp(raw_alignment_obj['report'])
     # end for
 
     return alignments
 # end def
 
 
-def parse_single_alignment(alignment_report):
-    try:
-        return Alignment(alignment_report)
-    except NoAlignmentError:
+def parse_alignments_nanopore(raw_alignments):
+
+    alignments = dict()
+
+    for raw_alignment_obj in raw_alignments:
+        query_name = raw_alignment_obj['report']['results']['search']['query_title']
+        alignments[query_name] = parse_hsps(raw_alignment_obj['report'])
+    # end for
+
+    return alignments
+# end def
+
+
+def parse_single_hsp(alignment_report):
+
+    search_result = alignment_report['results']['search']
+
+    if len(search_result['hits']) == 0:
         return None
-    # end try
+    # end if
+
+    hsps = search_result['hits'][0]['hsps']
+
+    first_hsp = hsps[0]
+    return Alignment(first_hsp)
+# end def
+
+
+def parse_hsps(alignment_report):
+
+    alignments = list()
+
+    search_result = alignment_report['results']['search']
+
+    if len(search_result['hits']) == 0:
+        return alignments
+    # end if
+
+    hsps = search_result['hits'][0]['hsps']
+
+    for hsp in hsps:
+        alignments.append(Alignment(hsp))
+    # end for
+
+    return alignments
 # end def
 
 
 class Alignment:
 
-    def __init__(self, blast_report):
-        search_result = blast_report['results']['search']
-
-        if len(search_result['hits']) == 0:
-            raise NoAlignmentError()
-        # end if
-
-        hsp = search_result['hits'][0]['hsps'][0]
-
-        self.query_name = search_result['query_title']
+    def __init__(self, hsp):
 
         self.query_from = hsp['query_from'] - 1 # 1-based to 0-based
         self.query_to   = hsp[ 'query_to' ] - 1 # 1-based to 0-based
@@ -59,14 +89,13 @@ class Alignment:
     # end def
 
     def get_align_len(self):
-        return max(0, self.ref_to - self.ref_from)
+        return max(0, self.query_to - self.query_from)
     # end def
 
     def __repr__(self):
         # return '{}\nQ:[{}-{}];R:[{}-{}];({})\nQgaps:{}\nRgaps:{}' \
-        return '{}\nQ:[{}-{}];R:[{}-{}];({})' \
+        return 'Q:[{}-{}];R:[{}-{}];({})' \
             .format(
-                self.query_name,
                 self.query_from,
                 self.query_to,
                 self.ref_from,
