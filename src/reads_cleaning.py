@@ -6,20 +6,13 @@ import multiprocessing as mp
 
 import src.fastq
 import src.primers as prm
+from src.progress import Progress
+import src.synchronization as synchron
 from src.printing import getwt, print_err
 from src.alignment import parse_alignments, Alignment
 
 from src.binning import PairedBinner
 from src.binning import MAJOR, MINOR, NON_SPECIFIC
-
-
-# This damned stuff should be global, because
-#   "Synchronized objects should only be shared between processes through inheritance"
-num_done_reads = mp.Value('i', 0)
-next_report_num = mp.Value('i', 0)
-output_lock = mp.Lock()
-print_lock = mp.Lock()
-status_update_lock = mp.Lock()
 
 
 
@@ -216,15 +209,15 @@ class ReadsCleaner:
             # end if
         # end for
 
-        with output_lock:
+        with synchron.output_lock:
             binner.write_binned_reads()
         # end with
-        with status_update_lock:
+        with synchron.status_update_lock:
             prev_next_value = self.progress.get_next_report_num()
             self.progress.increment_done(len(forward_chunk))
             self.progress.increment_next_report()
             if self.progress.get_next_report_num() != prev_next_value:
-                with print_lock:
+                with synchron.print_lock:
                     self.progress.print_status_bar()
                 # end with
             # end if
@@ -388,81 +381,3 @@ class ReadsCleaner:
         return fastq_chunks
     # end def _choose_fastq_chunks_func
 # end class
-
-
-
-class Progress:
-
-    def __init__(self, num_reads_total):
-        self.NUM_READS_TOTAL = num_reads_total
-        self._REPORT_DELAY = max(
-            1,
-            round(self.NUM_READS_TOTAL * 0.01)
-        )
-        self._DEFAULT_STATUS_BAR_LEN = 40
-
-        global next_report_num
-        next_report_num.value = self._REPORT_DELAY
-    # end def __init__
-
-    def get_num_done_reads(self):
-        global num_done_reads
-        return num_done_reads.value
-    # end def get_num_done_reads
-
-    def get_next_report_num(self):
-        global next_report_num
-        return next_report_num.value
-    # end def get_next_report_num
-
-    def increment_done(self, increment=1):
-        global num_done_reads
-        num_done_reads.value = num_done_reads.value + increment
-    # end def increment_done
-
-    def increment_next_report(self):
-        global next_report_num
-        while num_done_reads.value >= next_report_num.value:
-            next_report_num.value = next_report_num.value + self._REPORT_DELAY
-        # end while
-    # end def increment_next_report
-
-    def print_status_bar(self):
-
-        curr_num_done_reads = self.get_num_done_reads()
-
-        bar_len = self._get_status_bar_len()
-        ratio_done = curr_num_done_reads / self.NUM_READS_TOTAL
-        progress_line_len = round(bar_len * ratio_done)
-
-        print_arrow = progress_line_len != bar_len
-        if print_arrow:
-            arrow = '>'
-            progress_line_len -= 1
-        else:
-            arrow = ''
-        # end if
-
-        sys.stdout.write(
-            '\r{} - [{}{}{}] {}/{} ({}%)'.format(
-                getwt(),
-                '=' * progress_line_len,
-                arrow,
-                ' ' * (bar_len - progress_line_len),
-                curr_num_done_reads,
-                self.NUM_READS_TOTAL,
-                round(ratio_done * 100)
-            )
-        )
-        sys.stdout.flush()
-    # end def print_status_bar
-
-    def _get_status_bar_len(self):
-        try:
-            bar_len = int(os.get_terminal_size().columns * 0.40)
-        except OSError:
-            bar_len = self._DEFAULT_STATUS_BAR_LEN
-        # end try
-        return bar_len
-    # end _get_status_bar_len
-# end class Progress
