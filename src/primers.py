@@ -183,7 +183,8 @@ def _find_primer_anneal_coords(primer_seq, reference_seq, left=True, beg=0):
     # Widen primer annealing interval a bit in order not to
     #   misclassify minor alignments as abnormal ones due to single match
     #   occured by sheer chance.
-    random_match_amendment = 5 # bp
+    # random_match_amendment = 5 # bp
+    random_match_amendment = 10 # bp
 
     if left:
         start = start - random_match_amendment

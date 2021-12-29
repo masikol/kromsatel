@@ -17,7 +17,7 @@ class UnpairedBinner:
 
         self.major_reads = list()
         self.minor_reads = list()
-        self.non_specific_reads = list()
+        self.uncertain_reads = list()
     # end def
 
     def add_major_read(self, read):
@@ -28,8 +28,8 @@ class UnpairedBinner:
         self.minor_reads.append(read)
     # end def
 
-    def add_non_specific_read(self, read):
-        self.non_specific_reads.append(read)
+    def add_uncertain_read(self, read):
+        self.uncertain_reads.append(read)
     # end def
 
     def write_binned_reads(self):
@@ -37,13 +37,13 @@ class UnpairedBinner:
         outfpaths = (
             self.output.major_outfpath,
             self.output.minor_outfpath,
-            self.output.non_specific_outfpath,
+            self.output.uncertain_outfpath,
         )
 
         read_collections = (
             self.major_reads,
             self.minor_reads,
-            self.non_specific_reads,
+            self.uncertain_reads,
         )
 
         for outfpath, reads in zip(outfpaths, read_collections):

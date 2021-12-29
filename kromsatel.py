@@ -38,6 +38,8 @@ if '-h' in sys.argv[1:] or '--help' in sys.argv[1:] or '-help' in sys.argv[1:]:
     platf_depend_exit(0)
 # end if
 
+print('  == kromsatel v{} ==\n'.format(__version__))
+
 
 from src.main import main
 

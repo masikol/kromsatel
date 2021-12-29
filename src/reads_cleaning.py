@@ -81,7 +81,6 @@ class UnpairedReadsCleaner(ReadsCleaner):
 
         binner = UnpairedBinner(self.args['output'])
 
-
         for read in reads_chunk:
 
             read_alignments = alignments[read['seq_id']]
@@ -95,8 +94,13 @@ class UnpairedReadsCleaner(ReadsCleaner):
             for alignment in read_alignments:
 
                 alignment_overlaps = self._check_overlap(alignment, non_ovl_query_spans)
+
                 if alignment_overlaps:
                     continue
+                else:
+                    non_ovl_query_spans.append(
+                        (alignment.query_from, alignment.query_to,)
+                    )
                 # end if
 
                 left_orientation = alignment.align_strand_plus
@@ -111,7 +115,7 @@ class UnpairedReadsCleaner(ReadsCleaner):
                 read_start_coord = self._get_read_start_coord(alignment)
                 read_end_coord   = self._get_read_end_coord(alignment)
 
-                start_primer_num = self._search_start_primer_bruteforce(
+                start_primer_num = self._search_primer_bruteforce(
                     read_start_coord,
                     left=left_orientation
                 )
@@ -143,9 +147,9 @@ class UnpairedReadsCleaner(ReadsCleaner):
                         # end if
                     # end if
                 else:
-                    end_primer_num = self._search_start_primer_bruteforce(
+                    end_primer_num = self._search_primer_bruteforce(
                         read_end_coord,
-                        left_orientation
+                        (not left_orientation)
                     )
                 # end if
 
@@ -161,16 +165,16 @@ class UnpairedReadsCleaner(ReadsCleaner):
                 read_survives = trimmed_align_len >= self.MIN_LEN
 
                 if read_survives:
-                    # read['seq_id'] += '_'+str(alignment.query_from)
-                    read = self._trim_read(read, alignment)
+                    read_to_write = self._trim_read(read, alignment)
+                    read_to_write['seq_id'] = self._modify_read_name(read_to_write['seq_id'], alignment)
 
                     # Binning
                     if classification == MAJOR:
-                        binner.add_major_read(read)
+                        binner.add_major_read(read_to_write)
                     elif classification == MINOR:
-                        binner.add_minor_read(read)
+                        binner.add_minor_read(read_to_write)
                     else:
-                        binner.add_non_specific_read(read)
+                        binner.add_uncertain_read(read_to_write)
                     # end if
                 # end if
             # end for
@@ -205,8 +209,8 @@ class UnpairedReadsCleaner(ReadsCleaner):
 
     def _check_overlap(self, aligment, non_ovl_query_spans):
         for span in non_ovl_query_spans:
-            span_from = non_ovl_query_spans[0]
-            span_to   = non_ovl_query_spans[1]
+            span_from = span[0]
+            span_to   = span[1]
             if span_from <= aligment.query_from <= span_to:
                 return True
             # end if
@@ -241,19 +245,19 @@ class UnpairedReadsCleaner(ReadsCleaner):
         # end if
     # end def
 
-    def _search_start_primer_bruteforce(self, start_coord, left=True):
+    def _search_primer_bruteforce(self, coord, left=True):
         if left:
-            start_primer_num = \
+            primer_num = \
                 self.primer_scheme.find_left_primer_by_coord(
-                    start_coord
+                    coord
                 )
         else:
-            start_primer_num = \
+            primer_num = \
                 self.primer_scheme.find_right_primer_by_coord(
-                    start_coord
+                    coord
                 )
         # end if
-        return start_primer_num
+        return primer_num
     # end def
 
     def _trim_aligment(self, alignment, start_primer_num, end_primer_num, left=True):
@@ -338,10 +342,18 @@ class UnpairedReadsCleaner(ReadsCleaner):
     # end def
 
     def _trim_read(self, read, alignment):
+        read_copy = read.copy()
         new_start, new_end = alignment.query_from, alignment.query_to+1
-        read['seq']  = read['seq'] [new_start : new_end]
-        read['qual'] = read['qual'][new_start : new_end]
-        return read
+        read_copy['seq']  = read_copy['seq'] [new_start : new_end]
+        read_copy['qual'] = read_copy['qual'][new_start : new_end]
+        return read_copy
+    # end def
+
+    def _modify_read_name(self, read_name, alignment):
+        identifier = read_name.partition(src.fastq.SPACE_HOLDER)[0]
+        modified_identifier = '{}_{}-{}' \
+            .format(identifier, alignment.query_from, alignment.query_to)
+        return read_name.replace(identifier, modified_identifier)
     # end def
 
 # end class

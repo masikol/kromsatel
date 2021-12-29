@@ -16,8 +16,8 @@ class UnpairedOutput:
         self._set_major_outfpath()
         self.minor_outfpath = None
         self._set_minor_outfpath()
-        self.non_specific_outfpath = None
-        self._set_non_specific_outfpath()
+        self.uncertain_outfpath = None
+        self._set_uncertain_outfpath()
 
         self._init_output()
     # end def __init__
@@ -29,7 +29,7 @@ class UnpairedOutput:
         output_fpaths = (
             self.major_outfpath,
             self.minor_outfpath,
-            self.non_specific_outfpath,
+            self.uncertain_outfpath,
         )
         for outfpath in output_fpaths:
             fs.init_file(outfpath)
@@ -46,10 +46,10 @@ class UnpairedOutput:
         self.minor_outfpath = self._configure_outfpath(suffix)
     # end def _set_minor_outfpath
 
-    def _set_non_specific_outfpath(self):
-        suffix = 'non_specific'
-        self.non_specific_outfpath = self._configure_outfpath(suffix)
-    # end def _set_non_specific_outfpath
+    def _set_uncertain_outfpath(self):
+        suffix = 'uncertain'
+        self.uncertain_outfpath = self._configure_outfpath(suffix)
+    # end def _set_uncertain_outfpath
 
     def _configure_outfpath(self, suffix):
         return os.path.join(

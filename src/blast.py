@@ -247,7 +247,7 @@ def blast_align(reads_chunk, kromsatel_args):
         aligmnents = json.load(alignment_file)
     # end with
 
-    # fs.rm_temp_file(alignment_fpath)
+    fs.rm_temp_file(alignment_fpath)
 
     return aligmnents['BlastOutput2']
 # end def blast_align
