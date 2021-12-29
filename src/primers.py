@@ -198,8 +198,6 @@ class PrimerScheme:
 # end class PrimerScheme
 
 
-
-
 class PrimerPair:
     def __init__(self, left_primer, right_primer):
         self.left_primer = left_primer

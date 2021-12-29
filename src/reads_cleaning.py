@@ -1,6 +1,4 @@
 
-import os
-import sys
 import functools
 import multiprocessing as mp
 
@@ -8,14 +6,11 @@ import src.fastq
 import src.primers as prm
 from src.progress import Progress
 import src.synchronization as synchron
-from src.printing import getwt, print_err
+from src.printing import getwt
 from src.alignment import parse_alignments_illumina, parse_alignments_nanopore, Alignment
 
 from src.binning import UnpairedBinner, PairedBinner
 from src.binning import MAJOR, MINOR, UNCERTAIN
-
-
-import time
 
 
 class ReadsCleaner:
@@ -38,6 +33,128 @@ class ReadsCleaner:
     def clean_reads(self):
         raise NotImplementedError
     # end def
+
+    def _get_read_start_coord(self, alignment):
+        if alignment.align_strand_plus:
+            return alignment.ref_from
+        else:
+            return alignment.ref_to
+        # end if
+    # end def
+
+    def _get_read_end_coord(self, alignment):
+        if alignment.align_strand_plus:
+            return alignment.ref_to
+        else:
+            return alignment.ref_from
+        # end if
+    # end def
+
+    def _crop_start(self, alignment):
+        if alignment.align_strand_plus:
+            alignment.ref_from += self.FIXED_CROP_LEN
+            alignment.query_from += self.FIXED_CROP_LEN
+        else:
+            alignment.ref_to -= self.FIXED_CROP_LEN
+            alignment.query_from += self.FIXED_CROP_LEN
+        # end if
+        return alignment
+    # end def
+
+    def _crop_end(self, alignment):
+        if alignment.align_strand_plus:
+            alignment.ref_to -= self.FIXED_CROP_LEN
+            alignment.query_to -= self.FIXED_CROP_LEN
+        else:
+            alignment.ref_from += self.FIXED_CROP_LEN
+            alignment.query_to -= self.FIXED_CROP_LEN
+        # end if
+        return alignment
+    # end def
+
+    def _trim_start_primer(self, alignment, primer_num, left=True):
+        if left:
+            primer = self.primer_scheme.primer_pairs[primer_num].left_primer
+        else:
+            primer = self.primer_scheme.primer_pairs[primer_num].right_primer
+        # end if
+
+        if alignment.align_strand_plus:
+            primer_len_in_read = primer.end - alignment.ref_from + 1
+            alignment.ref_from += primer_len_in_read
+            alignment.query_from += primer_len_in_read
+        else:
+            primer_len_in_read = alignment.ref_to - primer.start + 1
+            alignment.ref_to -= primer_len_in_read
+            alignment.query_from += primer_len_in_read
+        # end if
+
+        return alignment
+    # end def
+
+    def _trim_end_primer(self, alignment, primer_num, left=True):
+        if left:
+            primer = self.primer_scheme.primer_pairs[primer_num].left_primer
+        else:
+            primer = self.primer_scheme.primer_pairs[primer_num].right_primer
+        # end if
+
+        if alignment.align_strand_plus:
+            primer_len_in_read = alignment.ref_to - primer.start + 1
+            alignment.ref_to -= primer_len_in_read
+            alignment.query_to -= primer_len_in_read
+        else:
+            primer_len_in_read = primer.end - alignment.ref_from + 1
+            alignment.ref_from += primer_len_in_read
+            alignment.query_to -= primer_len_in_read
+        # end if
+
+        return alignment
+    # end def
+
+    def _search_primer_bruteforce(self, coord, left=True):
+        if left:
+            primer_num = \
+                self.primer_scheme.find_left_primer_by_coord(
+                    coord
+                )
+        else:
+            primer_num = \
+                self.primer_scheme.find_right_primer_by_coord(
+                    coord
+                )
+        # end if
+        return primer_num
+    # end def
+
+    def _trim_read(self, read, alignment):
+        read_copy = read.copy()
+        new_start, new_end = alignment.query_from, alignment.query_to+1
+        read_copy['seq']  = read_copy['seq'] [new_start : new_end]
+        read_copy['qual'] = read_copy['qual'][new_start : new_end]
+        return read_copy
+    # end def
+
+    def _write_output_and_print_progress(self, binner, increment):
+
+        with synchron.output_lock:
+            binner.write_binned_reads()
+        # end with
+
+        with synchron.status_update_lock:
+
+            prev_next_value = self.progress.get_next_report_num()
+            self.progress.increment_done(increment)
+            self.progress.increment_next_report()
+
+            if self.progress.get_next_report_num() != prev_next_value:
+                with synchron.print_lock:
+                    self.progress.print_status_bar()
+                # end with
+            # end if
+        # end with
+    # end def
+
 # end class
 
 
@@ -102,11 +219,10 @@ class UnpairedReadsCleaner(ReadsCleaner):
 
                 if alignment_overlaps:
                     continue
-                else:
-                    non_ovl_query_spans.append(
-                        (alignment.query_from, alignment.query_to,)
-                    )
                 # end if
+                non_ovl_query_spans.append(
+                    (alignment.query_from, alignment.query_to,)
+                )
 
                 left_orientation = alignment.align_strand_plus
 
@@ -191,27 +307,6 @@ class UnpairedReadsCleaner(ReadsCleaner):
     # end def
 
 
-    def _write_output_and_print_progress(self, binner, increment):
-
-        with synchron.output_lock:
-            binner.write_binned_reads()
-        # end with
-
-        with synchron.status_update_lock:
-
-            prev_next_value = self.progress.get_next_report_num()
-            self.progress.increment_done(increment)
-            self.progress.increment_next_report()
-
-            if self.progress.get_next_report_num() != prev_next_value:
-                with synchron.print_lock:
-                    self.progress.print_status_bar()
-                # end with
-            # end if
-        # end with
-    # end def
-
-
     def _check_overlap(self, aligment, non_ovl_query_spans):
         for span in non_ovl_query_spans:
             span_from = span[0]
@@ -234,36 +329,6 @@ class UnpairedReadsCleaner(ReadsCleaner):
         return num_reads_total
     # end def
 
-    def _get_read_start_coord(self, alignment):
-        if alignment.align_strand_plus:
-            return alignment.ref_from
-        else:
-            return alignment.ref_to
-        # end if
-    # end def
-
-    def _get_read_end_coord(self, alignment):
-        if alignment.align_strand_plus:
-            return alignment.ref_to
-        else:
-            return alignment.ref_from
-        # end if
-    # end def
-
-    def _search_primer_bruteforce(self, coord, left=True):
-        if left:
-            primer_num = \
-                self.primer_scheme.find_left_primer_by_coord(
-                    coord
-                )
-        else:
-            primer_num = \
-                self.primer_scheme.find_right_primer_by_coord(
-                    coord
-                )
-        # end if
-        return primer_num
-    # end def
 
     def _trim_aligment(self, alignment, start_primer_num, end_primer_num, left=True):
 
@@ -283,84 +348,12 @@ class UnpairedReadsCleaner(ReadsCleaner):
         return alignment
     # end def
 
-    def _crop_start(self, alignment):
-        if alignment.align_strand_plus:
-            alignment.ref_from += self.FIXED_CROP_LEN
-            alignment.query_from += self.FIXED_CROP_LEN
-        else:
-            alignment.ref_to -= self.FIXED_CROP_LEN
-            alignment.query_from += self.FIXED_CROP_LEN
-        # end if
-        return alignment
-    # end def
-
-    def _crop_end(self, alignment):
-        if alignment.align_strand_plus:
-            alignment.ref_to -= self.FIXED_CROP_LEN
-            alignment.query_to -= self.FIXED_CROP_LEN
-        else:
-            alignment.ref_from += self.FIXED_CROP_LEN
-            alignment.query_to -= self.FIXED_CROP_LEN
-        # end if
-        return alignment
-    # end def
-
-
-    def _trim_start_primer(self, alignment, primer_num, left=True):
-        if left:
-            primer = self.primer_scheme.primer_pairs[primer_num].left_primer
-        else:
-            primer = self.primer_scheme.primer_pairs[primer_num].right_primer
-        # end if
-
-        if alignment.align_strand_plus:
-            primer_len_in_read = primer.end - alignment.ref_from + 1
-            alignment.ref_from += primer_len_in_read
-            alignment.query_from += primer_len_in_read
-        else:
-            primer_len_in_read = alignment.ref_to - primer.start + 1
-            alignment.ref_to -= primer_len_in_read
-            alignment.query_from += primer_len_in_read
-        # end if
-
-        return alignment
-    # end def
-
-    def _trim_end_primer(self, alignment, primer_num, left=True):
-        if left:
-            primer = self.primer_scheme.primer_pairs[primer_num].left_primer
-        else:
-            primer = self.primer_scheme.primer_pairs[primer_num].right_primer
-        # end if
-
-        if alignment.align_strand_plus:
-            primer_len_in_read = alignment.ref_to - primer.start + 1
-            alignment.ref_to -= primer_len_in_read
-            alignment.query_to -= primer_len_in_read
-        else:
-            primer_len_in_read = primer.end - alignment.ref_from + 1
-            alignment.ref_from += primer_len_in_read
-            alignment.query_to -= primer_len_in_read
-        # end if
-
-        return alignment
-    # end def
-
-    def _trim_read(self, read, alignment):
-        read_copy = read.copy()
-        new_start, new_end = alignment.query_from, alignment.query_to+1
-        read_copy['seq']  = read_copy['seq'] [new_start : new_end]
-        read_copy['qual'] = read_copy['qual'][new_start : new_end]
-        return read_copy
-    # end def
-
     def _modify_read_name(self, read_name, alignment):
         identifier = read_name.partition(src.fastq.SPACE_HOLDER)[0]
         modified_identifier = '{}_{}-{}' \
             .format(identifier, alignment.query_from, alignment.query_to)
         return read_name.replace(identifier, modified_identifier)
     # end def
-
 # end class
 
 
@@ -444,7 +437,7 @@ class PairedReadsCleaner(ReadsCleaner):
             forward_start_coord = self._get_read_start_coord(forward_alignment)
             reverse_start_coord = self._get_read_start_coord(reverse_alignment)
 
-            forward_start_primer_num = self._search_start_primer_bruteforce(
+            forward_start_primer_num = self._search_primer_bruteforce(
                 forward_start_coord,
                 forward_left
             )
@@ -476,7 +469,7 @@ class PairedReadsCleaner(ReadsCleaner):
                     # end if
                 # end if
             else:
-                reverse_start_primer_num = self._search_start_primer_bruteforce(
+                reverse_start_primer_num = self._search_primer_bruteforce(
                     reverse_start_coord,
                     forward_left
                 )
@@ -554,61 +547,6 @@ class PairedReadsCleaner(ReadsCleaner):
         self._write_output_and_print_progress(binner, increment)
     # end def
 
-
-    def _write_output_and_print_progress(self, binner, increment):
-
-        with synchron.output_lock:
-            binner.write_binned_reads()
-        # end with
-
-        with synchron.status_update_lock:
-
-            prev_next_value = self.progress.get_next_report_num()
-            self.progress.increment_done(increment)
-            self.progress.increment_next_report()
-
-            if self.progress.get_next_report_num() != prev_next_value:
-                with synchron.print_lock:
-                    self.progress.print_status_bar()
-                # end with
-            # end if
-        # end with
-    # end def
-
-
-    def _get_read_start_coord(self, alignment):
-        if alignment.align_strand_plus:
-            return alignment.ref_from
-        else:
-            return alignment.ref_to
-        # end if
-    # end def
-
-    def _get_read_end_coord(self, alignment):
-        if alignment.align_strand_plus:
-            return alignment.ref_to
-        else:
-            return alignment.ref_from
-        # end if
-    # end def
-
-
-    def _search_start_primer_bruteforce(self, start_coord, left=True):
-        if left:
-            start_primer_num = \
-                self.primer_scheme.find_left_primer_by_coord(
-                    start_coord
-                )
-        else:
-            start_primer_num = \
-                self.primer_scheme.find_right_primer_by_coord(
-                    start_coord
-                )
-        # end if
-        return start_primer_num
-    # end def
-
-
     def _trim_aligment(self, alignment, start_primer_num, end_primer_num, crop_end=True, left=True):
 
         if not start_primer_num is None:
@@ -628,79 +566,6 @@ class PairedReadsCleaner(ReadsCleaner):
 
         return alignment
     # end def
-
-
-    def _trim_read(self, read, alignment):
-        new_start, new_end = alignment.query_from, alignment.query_to+1
-        read['seq']  = read['seq'] [new_start : new_end]
-        read['qual'] = read['qual'][new_start : new_end]
-        return read
-    # end def
-
-
-    def _crop_start(self, alignment):
-        if alignment.align_strand_plus:
-            alignment.ref_from += self.FIXED_CROP_LEN
-            alignment.query_from += self.FIXED_CROP_LEN
-        else:
-            alignment.ref_to -= self.FIXED_CROP_LEN
-            alignment.query_from += self.FIXED_CROP_LEN
-        # end if
-        return alignment
-    # end def
-
-    def _crop_end(self, alignment):
-        if alignment.align_strand_plus:
-            alignment.ref_to -= self.FIXED_CROP_LEN
-            alignment.query_to -= self.FIXED_CROP_LEN
-        else:
-            alignment.ref_from += self.FIXED_CROP_LEN
-            alignment.query_to -= self.FIXED_CROP_LEN
-        # end if
-        return alignment
-    # end def
-
-
-    def _trim_start_primer(self, alignment, primer_num, left=True):
-        if left:
-            primer = self.primer_scheme.primer_pairs[primer_num].left_primer
-        else:
-            primer = self.primer_scheme.primer_pairs[primer_num].right_primer
-        # end if
-
-        if alignment.align_strand_plus:
-            primer_len_in_read = primer.end - alignment.ref_from + 1
-            alignment.ref_from += primer_len_in_read
-            alignment.query_from += primer_len_in_read
-        else:
-            primer_len_in_read = alignment.ref_to - primer.start + 1
-            alignment.ref_to -= primer_len_in_read
-            alignment.query_from += primer_len_in_read
-        # end if
-
-        return alignment
-    # end def
-
-    def _trim_end_primer(self, alignment, primer_num, left=True):
-        if left:
-            primer = self.primer_scheme.primer_pairs[primer_num].left_primer
-        else:
-            primer = self.primer_scheme.primer_pairs[primer_num].right_primer
-        # end if
-
-        if alignment.align_strand_plus:
-            primer_len_in_read = alignment.ref_to - primer.start + 1
-            alignment.ref_to -= primer_len_in_read
-            alignment.query_to -= primer_len_in_read
-        else:
-            primer_len_in_read = primer.end - alignment.ref_from + 1
-            alignment.ref_from += primer_len_in_read
-            alignment.query_to -= primer_len_in_read
-        # end if
-
-        return alignment
-    # end def
-
 
     def _count_reads(self):
         print('{} - Counting reads...'.format(getwt()))
