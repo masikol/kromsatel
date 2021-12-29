@@ -6,7 +6,7 @@ from src.fastq import write_fastq_record
 
 MAJOR        = 0
 MINOR        = 1
-NON_SPECIFIC = 2
+UNCERTAIN = 2
 
 
 class UnpairedBinner:
@@ -75,8 +75,8 @@ class PairedBinner:
         self.minor_forward_reads = list()
         self.minor_reverse_reads = list()
 
-        self.non_specific_forward_reads = list()
-        self.non_specific_reverse_reads = list()
+        self.uncertain_forward_reads = list()
+        self.uncertain_reverse_reads = list()
 
         self.unpaired_forward_reads = list()
         self.unpaired_reverse_reads = list()
@@ -92,9 +92,9 @@ class PairedBinner:
         self.minor_reverse_reads.append(reverse_read)
     # end def
 
-    def add_non_specific_pair(self, forward_read, reverse_read):
-        self.non_specific_forward_reads.append(forward_read)
-        self.non_specific_reverse_reads.append(reverse_read)
+    def add_uncertain_pair(self, forward_read, reverse_read):
+        self.uncertain_forward_reads.append(forward_read)
+        self.uncertain_reverse_reads.append(reverse_read)
     # end def
 
     def add_forward_unpaired_read(self, read):
@@ -110,7 +110,7 @@ class PairedBinner:
         outfpaths = (
             self.output.major_forward_outfpath,        self.output.major_reverse_outfpath,
             self.output.minor_forward_outfpath,        self.output.minor_reverse_outfpath,
-            self.output.non_specific_forward_outfpath, self.output.non_specific_reverse_outfpath,
+            self.output.uncertain_forward_outfpath, self.output.uncertain_reverse_outfpath,
             self.output.unpaired_forward_outfpath,
             self.output.unpaired_reverse_outfpath,
         )
@@ -118,7 +118,7 @@ class PairedBinner:
         read_collections = (
             self.major_forward_reads,        self.major_reverse_reads,
             self.minor_forward_reads,        self.minor_reverse_reads,
-            self.non_specific_forward_reads, self.non_specific_reverse_reads,
+            self.uncertain_forward_reads, self.uncertain_reverse_reads,
             self.unpaired_forward_reads,
             self.unpaired_reverse_reads,
         )

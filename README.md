@@ -84,7 +84,7 @@ Miscellaneous:
 
   --crop-len -- number of nucleotides to crop from end of reads
       originating from a non-specific amplicon.
-      Default: 27 bp.
+      Default: 'auto' (maximum primer len).
 ```
 
 ### Examples
@@ -95,6 +95,16 @@ Miscellaneous:
     -p primers/nCov-2019_primers.csv \
     -r reference/Wuhan-Hu-1-compele-genome.fasta \
     -o 20_s30_outdir
+```
+
+```
+./kromsatel.py \
+    -1 20_S30_L001_R1_001.fastq.gz \
+    -2 20_S30_L001_R2_001.fastq.gz \
+    -p primers/nCov-2019_primers.csv \
+    -r reference/Wuhan-Hu-1-compele-genome.fasta \
+    -o 20_s30_outdir \
+    --crop-len 27
 ```
 
 ## Output files

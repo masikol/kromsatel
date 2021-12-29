@@ -39,6 +39,7 @@ class PrimerScheme:
     def __init__(self, kromsatel_args):
         self.primers_fpath = kromsatel_args['primers_fpath']
         self.reference_fpath = kromsatel_args['reference_fpath']
+        self.max_primer_len = 0
         self.primer_pairs = self._parse_primers()
     # end def __init__
 
@@ -100,6 +101,12 @@ class PrimerScheme:
 
                     left_primer_seq, right_primer_seq = self._parse_primer_pair(primers_file, sep)
 
+                    self.max_primer_len = max(
+                        self.max_primer_len,
+                        len(left_primer_seq),
+                        len(right_primer_seq)
+                    )
+
                     left_start, left_end = _find_primer_anneal_coords(
                         left_primer_seq,
                         reference_seq,
@@ -122,7 +129,7 @@ class PrimerScheme:
                         )
                     )
                 except ValueError as err:
-                    print_err('Error: cannot parse a line in file `{}.`'.format(self.primers_fpath))
+                    print_err('Error: cannot parse a line in file `{}`.'.format(self.primers_fpath))
                     print_err(str(err))
                     platf_depend_exit(1)
                 # end try

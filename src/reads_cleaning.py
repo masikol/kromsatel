@@ -12,7 +12,7 @@ from src.printing import getwt, print_err
 from src.alignment import parse_alignments_illumina, parse_alignments_nanopore, Alignment
 
 from src.binning import UnpairedBinner, PairedBinner
-from src.binning import MAJOR, MINOR, NON_SPECIFIC
+from src.binning import MAJOR, MINOR, UNCERTAIN
 
 
 import time
@@ -25,9 +25,14 @@ class ReadsCleaner:
 
         self.MIN_LEN = args['min_len']
         self.threads = args['n_thr']
-        self.FIXED_CROP_LEN = args['fixed_crop_len']
 
         self.primer_scheme = prm.PrimerScheme(args)
+
+        if self.args['fixed_crop_len'] == 'auto':
+            self.FIXED_CROP_LEN = self.primer_scheme.max_primer_len
+        else:
+            self.FIXED_CROP_LEN = args['fixed_crop_len']
+        # end if
     # end def
 
     def clean_reads(self):
@@ -105,7 +110,7 @@ class UnpairedReadsCleaner(ReadsCleaner):
 
                 left_orientation = alignment.align_strand_plus
 
-                classification = NON_SPECIFIC
+                classification = UNCERTAIN
 
                 read_survives = False
 
@@ -429,7 +434,7 @@ class PairedReadsCleaner(ReadsCleaner):
                 continue
             # end if
 
-            classification = NON_SPECIFIC
+            classification = UNCERTAIN
             crop_forward_end, crop_reverse_end = True, True
             forward_survives, reverse_survives = False, False
 
@@ -536,7 +541,7 @@ class PairedReadsCleaner(ReadsCleaner):
                 elif classification == MINOR:
                     binner.add_minor_pair(forward_read, reverse_read)
                 else:
-                    binner.add_non_specific_pair(forward_read, reverse_read)
+                    binner.add_uncertain_pair(forward_read, reverse_read)
                 # end if
             elif forward_survives and not reverse_survives:
                 binner.add_forward_unpaired_read(forward_read)

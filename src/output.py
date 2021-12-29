@@ -75,9 +75,9 @@ class PairedOutput:
         self.minor_forward_outfpath = None
         self.minor_reverse_outfpath = None
         self._set_minor_outfpaths()
-        self.non_specific_forward_outfpath = None
-        self.non_specific_reverse_outfpath = None
-        self._set_non_specific_outfpaths()
+        self.uncertain_forward_outfpath = None
+        self.uncertain_reverse_outfpath = None
+        self._set_uncertain_outfpaths()
         self.unpaired_forward_outfpath = None
         self.unpaired_reverse_outfpath = None
         self._set_unpaired_outfpaths()
@@ -93,8 +93,8 @@ class PairedOutput:
             self.major_reverse_outfpath,
             self.minor_forward_outfpath,
             self.minor_reverse_outfpath,
-            self.non_specific_forward_outfpath,
-            self.non_specific_reverse_outfpath,
+            self.uncertain_forward_outfpath,
+            self.uncertain_reverse_outfpath,
             self.unpaired_forward_outfpath,
             self.unpaired_reverse_outfpath,
         )
@@ -115,10 +115,10 @@ class PairedOutput:
         self.minor_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
     # end def
 
-    def _set_non_specific_outfpaths(self):
-        suffix = 'non_specific'
-        self.non_specific_forward_outfpath = self._configure_outfpath(suffix, forward=True)
-        self.non_specific_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
+    def _set_uncertain_outfpaths(self):
+        suffix = 'uncertain'
+        self.uncertain_forward_outfpath = self._configure_outfpath(suffix, forward=True)
+        self.uncertain_reverse_outfpath = self._configure_outfpath(suffix, forward=False)
     # end def
 
     def _set_unpaired_outfpaths(self):
