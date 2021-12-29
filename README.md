@@ -2,9 +2,7 @@
 
 Current version is `1.7.a_dev` (2021-XX-XX edition).
 
-## Description (TODO: depracated)
-
-Deprecation notice: now kromsatel can process only Illumina paired-end reads.
+## Description (TODO: the description needs to be updated)
 
 Kromsatel is a script for preprocessing raw reads obtained using [ARTIC's protocol](https://artic.network/ncov-2019) for sequencing SARS-CoV-2 genome. Here, "preprocessing" stands for splitting chimeric reads into consistent fragments according to primer scheme described in the [protocol](https://artic.network/ncov-2019) (or according to your own primer scheme).
 
@@ -46,18 +44,17 @@ Mandatory arguments are marked with `*`.
 
 Input:
 
-* -1 (--reads-R1) -- a fastq file of forward reads.
+  -1 (--reads-R1) -- a fastq file of forward reads.
       The file may be gzipped.
 
-* -2 (--reads-R2) -- a fastq file of reverse reads.
+  -2 (--reads-R2) -- a fastq file of reverse reads.
       The file may be gzipped.
 
   -u (--reads-unpaired) -- a fastq file of unpaired reads.
       The file may be gzipped.
-      (TODO: Not supported yet)
 
 * -p (--primers) -- a CSV file of primer names and sequences.
-      This must be two-columns CSV file without header.
+      This file must be a two-column CSV file without header.
 
 * -r (--reference) -- a fasta file of reference sequence.
 
@@ -66,13 +63,15 @@ Output:
   -o (--outdir) -- output directory.
       Default value is './kromsatel_output'
 
-Miscellaneous:
+  -m (--min-len) -- minimum length of an output read.
+      Default: 25 bp.
+
+Computational resources:
 
   -t (--threads) -- number of threads to launch.
       Default: 1 thread.
 
-  -m (--min-len) -- minimum length of an output read.
-      Default: 25 bp.
+Advanced:
 
   -k (--blast-task) -- BLASTn task to launch.
       Allowed values: 'megablast', 'dc-megablast', 'blastn'.
@@ -85,9 +84,17 @@ Miscellaneous:
   --crop-len -- number of nucleotides to crop from end of reads
       originating from a non-specific amplicon.
       Default: 'auto' (maximum primer len).
+
+  --primer-5ext -- size of 5' primer coordinates extention.
+      Low (< 2 bp) values of this parameter may result in extra major alignments
+      classified as uncertain, and vice versa for high values (> 10 bp).
+      Default: 5 bp.
 ```
 
 ### Examples
+
+#### Paired-end reads
+
 ```
 ./kromsatel.py \
     -1 20_S30_L001_R1_001.fastq.gz \
@@ -97,6 +104,16 @@ Miscellaneous:
     -o 20_s30_outdir
 ```
 
+#### Single-end reads
+```
+./kromsatel.py \
+    -u Wuhan-Hu-1.fastq.gz \
+    -p primers/nCov-2019_primers.csv \
+    -r reference/Wuhan-Hu-1-compele-genome.fasta \
+    -o 20_s30_outdir
+```
+
+#### With all possible options
 ```
 ./kromsatel.py \
     -1 20_S30_L001_R1_001.fastq.gz \
@@ -104,14 +121,19 @@ Miscellaneous:
     -p primers/nCov-2019_primers.csv \
     -r reference/Wuhan-Hu-1-compele-genome.fasta \
     -o 20_s30_outdir \
-    --crop-len 27
+    -k dc-megablast \
+    -c 2000 \
+    -m 50 \
+    -t 4 \
+    --crop-len 27 \
+    --primer-5ext 3
 ```
 
 ## Output files
 
 TODO
 
-### Read names (TODO: deprecated)
+### Read names (TODO: update this section)
 
 In output file, reads are named in following way:
 

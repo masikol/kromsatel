@@ -39,6 +39,8 @@ class PrimerScheme:
     def __init__(self, kromsatel_args):
         self.primers_fpath = kromsatel_args['primers_fpath']
         self.reference_fpath = kromsatel_args['reference_fpath']
+        self.primer_ext_len = kromsatel_args['primer_ext_len']
+
         self.max_primer_len = 0
         self.primer_pairs = self._parse_primers()
     # end def __init__
@@ -107,7 +109,7 @@ class PrimerScheme:
                         len(right_primer_seq)
                     )
 
-                    left_start, left_end = _find_primer_anneal_coords(
+                    left_start, left_end = self._find_primer_anneal_coords(
                         left_primer_seq,
                         reference_seq,
                         left=True,
@@ -115,7 +117,7 @@ class PrimerScheme:
                     )
                     find_start_pos = left_start
 
-                    right_start, right_end = _find_primer_anneal_coords(
+                    right_start, right_end = self._find_primer_anneal_coords(
                         _reverse_complement(right_primer_seq),
                         reference_seq,
                         left=False,
@@ -174,33 +176,28 @@ class PrimerScheme:
         return primer_seq
     # end def _parse_primer_from_csv_line
 
+
+    def _find_primer_anneal_coords(self, primer_seq, reference_seq, left=True, beg=0):
+
+        start = reference_seq.find(primer_seq, beg)
+
+        if start == -1:
+            raise ValueError('Cannot find primer `{}` in the reference sequence'.format(primer_seq))
+        # end if
+
+        end = start + len(primer_seq) - 1
+
+        if left:
+            start = start - self.primer_ext_len
+        else:
+            end   =   end + self.primer_ext_len
+        # end if
+
+        return start, end
+    # end def
 # end class PrimerScheme
 
 
-def _find_primer_anneal_coords(primer_seq, reference_seq, left=True, beg=0):
-
-    start = reference_seq.find(primer_seq, beg)
-
-    if start == -1:
-        raise ValueError('Cannot find primer `{}` in the reference sequence'.format(primer_seq))
-    # end if
-
-    end = start + len(primer_seq) - 1
-
-    # Widen primer annealing interval a bit in order not to
-    #   misclassify minor alignments as abnormal ones due to single match
-    #   occured by sheer chance.
-    # random_match_amendment = 5 # bp
-    random_match_amendment = 10 # bp
-
-    if left:
-        start = start - random_match_amendment
-    else:
-        end   = end   + random_match_amendment
-    # end if
-
-    return start, end
-# end def
 
 
 class PrimerPair:

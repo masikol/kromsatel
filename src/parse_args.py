@@ -21,7 +21,7 @@ def handle_cl_args():
                 'reads-R1=', 'reads-R2=', 'reads-unpaired=',
                 'primers=', 'reference=',
                 'threads=', 'chunk-size=', 'min-len=', 'blast-task=',
-                'crop-len=',
+                'crop-len=', 'primer-5ext=',
                 'outdir=',
             ]
         )
@@ -42,6 +42,7 @@ def handle_cl_args():
         'min_len': 25,             # minimum length of an output read (bp)
         'blast_task': 'megablast', # variant of BLAST algorithm
         'fixed_crop_len': 'auto',  # size of sequence to crop from reads of non-specific amplicons
+        'primer_ext_len': 5,       # size of 5' primer extention
         'outdir': os.path.join(    # output directory
             os.getcwd(),
             'kromsatel_output'
@@ -172,6 +173,19 @@ def handle_cl_args():
                     platf_depend_exit(1)
                 # end try
             # end if
+
+        elif opt == '--primer-5ext':
+            try:
+                kromsatel_args['primer_ext_len'] = int(arg)
+                if kromsatel_args['primer_ext_len'] < 0:
+                    raise ValueError
+                # end if
+            except ValueError:
+                print_err('\nInvalid value passed with the option `{}`: {}'\
+                    .format(opt, arg))
+                print_err('It must be integer number >= 0.')
+                platf_depend_exit(1)
+            # end try
 
         elif opt in ('-o', '--outdir'):
             kromsatel_args['outdir'] = os.path.abspath(arg)
