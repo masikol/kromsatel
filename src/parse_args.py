@@ -20,7 +20,7 @@ def handle_cl_args():
                 'help', 'version',
                 'reads-R1=', 'reads-R2=', 'reads-unpaired=',
                 'primers=', 'reference=',
-                'threads=', 'chunk-size=', 'min-len=', 'blast-task=',
+                'threads=', 'chunk-size=', 'min-len=', 'blast-task=', 'use-index=',
                 'crop-len=', 'primer-5ext=',
                 'outdir=',
             ]
@@ -48,8 +48,10 @@ def handle_cl_args():
             'kromsatel_output'
         ),
         'paired_mode': False,      # True if PE, False if unpaired
-        'use_index': True,         # True if blast should perform indexed search
+        'use_index': None,         # whether to make blast index
     }
+
+    use_index_string = 'auto'
 
     # Handle options
     for opt, arg in opts:
@@ -150,12 +152,22 @@ def handle_cl_args():
             # end try
 
         elif opt in ('-k', '--blast-task'):
-            if not arg in src.blastn.BLAST_TASKS:
+            if not arg in src.blast.BLAST_TASKS:
                 print_err('\nError: invalid name of a blast task: {}.'.format(arg))
-                print_err('Allowed values: {}'.format(', '.join(src.blastn.BLAST_TASKS)))
+                print_err('Allowed values: {}'.format(', '.join(src.blast.BLAST_TASKS)))
                 platf_depend_exit(1)
             # end if
             kromsatel_args['blast_task'] = arg
+
+        elif opt == '--use-index':
+            if arg in ('auto', 'true', 'false'):
+                use_index_string = arg
+            else:
+                print_err('\nError: invalid argument passed with option {}'.format(opt))
+                print_err('Permitted values: `true`, `false`, `auto`. Default: `auto`.')
+                print_err('Your value: `{}`').format(arg)
+                platf_depend_exit(1)
+            # end if
 
         elif opt == '--crop-len':
             if arg == 'auto':
@@ -209,7 +221,23 @@ def handle_cl_args():
         platf_depend_exit(1)
     # end if
 
-    kromsatel_args['use_index'] = src.blast.if_use_index(kromsatel_args['blast_task'])
+    if use_index_string == 'auto':
+        kromsatel_args['use_index'] = src.blast.detect_auto_use_index(kromsatel_args['blast_task'])
+    elif use_index_string == 'true':
+        kromsatel_args['use_index'] = True
+    elif use_index_string == 'false':
+        kromsatel_args['use_index'] = False
+    # end if
+
+    try:
+        src.blast.check_use_index(
+            kromsatel_args['blast_task'],
+            kromsatel_args['use_index']
+        )
+    except ValueError as err:
+        print_err(err)
+        platf_depend_exit(1)
+    # end try
 
     if len(kromsatel_args['reads_R1']) != 0:
         kromsatel_args['paired_mode'] = True

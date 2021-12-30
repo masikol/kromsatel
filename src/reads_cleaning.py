@@ -4,10 +4,13 @@ import multiprocessing as mp
 
 import src.fastq
 import src.primers as prm
+from src.printing import getwt
 from src.progress import Progress
 import src.synchronization as synchron
-from src.printing import getwt
 from src.alignment import parse_alignments_illumina, parse_alignments_nanopore, Alignment
+
+from src.orientation import LEFT, RIGHT
+from src.orientation import switch_orientation
 
 from src.binning import UnpairedBinner, PairedBinner
 from src.binning import MAJOR, MINOR, UNCERTAIN
@@ -72,8 +75,8 @@ class ReadsCleaner:
         return alignment
     # end def
 
-    def _trim_start_primer(self, alignment, primer_num, left=True):
-        if left:
+    def _trim_start_primer(self, alignment, primer_num, orientation):
+        if orientation == LEFT:
             primer = self.primer_scheme.primer_pairs[primer_num].left_primer
         else:
             primer = self.primer_scheme.primer_pairs[primer_num].right_primer
@@ -92,8 +95,8 @@ class ReadsCleaner:
         return alignment
     # end def
 
-    def _trim_end_primer(self, alignment, primer_num, left=True):
-        if left:
+    def _trim_end_primer(self, alignment, primer_num, orientation):
+        if orientation == LEFT:
             primer = self.primer_scheme.primer_pairs[primer_num].left_primer
         else:
             primer = self.primer_scheme.primer_pairs[primer_num].right_primer
@@ -112,8 +115,8 @@ class ReadsCleaner:
         return alignment
     # end def
 
-    def _search_primer_bruteforce(self, coord, left=True):
-        if left:
+    def _search_primer_bruteforce(self, coord, orientation):
+        if orientation == LEFT:
             primer_num = \
                 self.primer_scheme.find_left_primer_by_coord(
                     coord
@@ -135,6 +138,24 @@ class ReadsCleaner:
         return read_copy
     # end def
 
+    def _get_minor_primer_num(self, primer_num, orientation):
+        if orientation == LEFT:
+            minor_primer_num = primer_num - 1
+        else:
+            minor_primer_num = primer_num + 1
+        # end if
+        return minor_primer_num
+    # end def
+
+    def _get_orientation(self, alignment):
+        if alignment.align_strand_plus:
+            orientation = LEFT
+        else:
+            orientation = RIGHT
+        # end if
+        return orientation
+    # end def
+
     def _write_output_and_print_progress(self, binner, increment):
 
         with synchron.output_lock:
@@ -154,9 +175,7 @@ class ReadsCleaner:
             # end if
         # end with
     # end def
-
 # end class
-
 
 
 class UnpairedReadsCleaner(ReadsCleaner):
@@ -224,7 +243,7 @@ class UnpairedReadsCleaner(ReadsCleaner):
                     (alignment.query_from, alignment.query_to,)
                 )
 
-                left_orientation = alignment.align_strand_plus
+                orientation = self._get_orientation(alignment)
 
                 classification = UNCERTAIN
 
@@ -238,7 +257,7 @@ class UnpairedReadsCleaner(ReadsCleaner):
 
                 start_primer_num = self._search_primer_bruteforce(
                     read_start_coord,
-                    left=left_orientation
+                    orientation
                 )
                 start_primer_found = not (start_primer_num is None)
 
@@ -248,19 +267,19 @@ class UnpairedReadsCleaner(ReadsCleaner):
                         self.primer_scheme.check_coord_within_primer(
                             read_end_coord,
                             start_primer_num,
-                            left=(not left_orientation)
+                            switch_orientation[orientation]
                         )
 
                     if end_major:
                         classification = MAJOR
                         end_primer_num = start_primer_num
                     else:
-                        minor_pair_primer_num = start_primer_num + (-1 if left_orientation else 1)
+                        minor_pair_primer_num = self._get_minor_primer_num(start_primer_num, orientation)
                         end_minor = \
                             self.primer_scheme.check_coord_within_primer(
                                 read_end_coord,
                                 minor_pair_primer_num,
-                                left=(not left_orientation)
+                                switch_orientation[orientation]
                             )
                         if end_minor:
                             classification = MINOR
@@ -270,7 +289,7 @@ class UnpairedReadsCleaner(ReadsCleaner):
                 else:
                     end_primer_num = self._search_primer_bruteforce(
                         read_end_coord,
-                        (not left_orientation)
+                        switch_orientation[orientation]
                     )
                 # end if
 
@@ -278,7 +297,7 @@ class UnpairedReadsCleaner(ReadsCleaner):
                     alignment,
                     start_primer_num,
                     end_primer_num,
-                    left_orientation
+                    orientation
                 )
 
                 trimmed_align_len = alignment.get_align_len()
@@ -330,17 +349,17 @@ class UnpairedReadsCleaner(ReadsCleaner):
     # end def
 
 
-    def _trim_aligment(self, alignment, start_primer_num, end_primer_num, left=True):
+    def _trim_aligment(self, alignment, start_primer_num, end_primer_num, orientation):
 
         if not start_primer_num is None:
-            alignment = self._trim_start_primer(alignment, start_primer_num, left)
+            alignment = self._trim_start_primer(alignment, start_primer_num, orientation)
         else:
             alignment = self._crop_start(alignment)
         # end if
 
-        right = not left
+        opposite_orientation = switch_orientation[orientation]
         if not end_primer_num is None:
-            alignment = self._trim_end_primer(alignment, end_primer_num, right)
+            alignment = self._trim_end_primer(alignment, end_primer_num, opposite_orientation)
         else:
             alignment = self._crop_end(alignment)
         # end if
@@ -355,7 +374,6 @@ class UnpairedReadsCleaner(ReadsCleaner):
         return read_name.replace(identifier, modified_identifier)
     # end def
 # end class
-
 
 
 class PairedReadsCleaner(ReadsCleaner):
@@ -419,10 +437,10 @@ class PairedReadsCleaner(ReadsCleaner):
                 continue
             # end if
 
-            forward_left = forward_alignment.align_strand_plus
-            reverse_left = reverse_alignment.align_strand_plus
+            forward_orientation = self._get_orientation(forward_alignment)
+            reverse_orientation = self._get_orientation(reverse_alignment)
 
-            improper_orientation = forward_left == reverse_left
+            improper_orientation = forward_orientation == reverse_orientation
             if improper_orientation:
                 continue
             # end if
@@ -439,7 +457,7 @@ class PairedReadsCleaner(ReadsCleaner):
 
             forward_start_primer_num = self._search_primer_bruteforce(
                 forward_start_coord,
-                forward_left
+                forward_orientation
             )
             forward_start_primer_found = not (forward_start_primer_num is None)
 
@@ -449,19 +467,19 @@ class PairedReadsCleaner(ReadsCleaner):
                     self.primer_scheme.check_coord_within_primer(
                         reverse_start_coord,
                         forward_start_primer_num,
-                        left=reverse_left
+                        reverse_orientation
                     )
 
                 if reverse_start_major:
                     classification = MAJOR
                     reverse_start_primer_num = forward_start_primer_num
                 else:
-                    minor_pair_primer_num = forward_start_primer_num + (-1 if forward_left else 1)
+                    minor_pair_primer_num = self._get_minor_primer_num(forward_start_primer_num, forward_orientation)
                     reverse_start_minor = \
                         self.primer_scheme.check_coord_within_primer(
                             reverse_start_coord,
                             minor_pair_primer_num,
-                            left=reverse_left
+                            reverse_orientation
                         )
                     if reverse_start_minor:
                         classification = MINOR
@@ -471,7 +489,7 @@ class PairedReadsCleaner(ReadsCleaner):
             else:
                 reverse_start_primer_num = self._search_primer_bruteforce(
                     reverse_start_coord,
-                    forward_left
+                    forward_orientation
                 )
             # end if
 
@@ -480,7 +498,7 @@ class PairedReadsCleaner(ReadsCleaner):
                 crop_reverse_end = self.primer_scheme.check_coord_within_primer(
                     reverse_end_coord,
                     forward_start_primer_num,
-                    left=forward_left
+                    forward_orientation
                 )
                 if crop_reverse_end:
                     reverse_end_primer_num = forward_start_primer_num
@@ -491,7 +509,7 @@ class PairedReadsCleaner(ReadsCleaner):
                 crop_forward_end = self.primer_scheme.check_coord_within_primer(
                     forward_end_coord,
                     reverse_start_primer_num,
-                    left=reverse_left
+                    reverse_orientation
                 )
                 if crop_forward_end:
                     forward_end_primer_num = reverse_start_primer_num
@@ -502,16 +520,16 @@ class PairedReadsCleaner(ReadsCleaner):
                 forward_alignment,
                 forward_start_primer_num,
                 forward_end_primer_num,
-                crop_forward_end,
-                forward_left
+                forward_orientation,
+                crop_forward_end
             )
 
             reverse_alignment = self._trim_aligment(
                 reverse_alignment,
                 reverse_start_primer_num,
                 reverse_end_primer_num,
-                crop_reverse_end,
-                reverse_left
+                reverse_orientation,
+                crop_reverse_end
             )
 
             trimmed_forward_align_len = forward_alignment.get_align_len()
@@ -547,17 +565,17 @@ class PairedReadsCleaner(ReadsCleaner):
         self._write_output_and_print_progress(binner, increment)
     # end def
 
-    def _trim_aligment(self, alignment, start_primer_num, end_primer_num, crop_end=True, left=True):
+    def _trim_aligment(self, alignment, start_primer_num, end_primer_num, orientation, crop_end=True):
 
         if not start_primer_num is None:
-            alignment = self._trim_start_primer(alignment, start_primer_num, left)
+            alignment = self._trim_start_primer(alignment, start_primer_num, orientation)
         else:
             alignment = self._crop_start(alignment)
         # end if
 
-        right = not left
+        opposite_orientation = switch_orientation[orientation]
         if not end_primer_num is None:
-            alignment = self._trim_end_primer(alignment, end_primer_num, right)
+            alignment = self._trim_end_primer(alignment, end_primer_num, opposite_orientation)
         else:
             if crop_end:
                 alignment = self._crop_end(alignment)

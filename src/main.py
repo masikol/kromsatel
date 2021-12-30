@@ -1,5 +1,5 @@
 
-
+import os
 
 import src.blast
 import src.output as out
@@ -56,11 +56,9 @@ def _configure_output(kromsatel_args):
 def _clean_tmp_files(kromsatel_args):
     fs.rm_tmp_dir(kromsatel_args['tmp_dir'])
 
-    # TODO:
-    # Uncomment. It is temporarily commented for debug purposes
-    # fs.rm_tmp_dir(
-    #     os.path.dirname(
-    #         kromsatel_args['db_fpath']
-    #     )
-    # )
+    fs.rm_tmp_dir(
+        os.path.dirname(
+            kromsatel_args['db_fpath']
+        )
+    )
 # end def

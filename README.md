@@ -1,6 +1,6 @@
 # kromsatel
 
-Current version is `1.7.a_dev` (2021-XX-XX edition).
+Current version is `1.7.b_dev` (2021-XX-XX edition).
 
 ## Description (TODO: the description needs to be updated)
 
@@ -83,12 +83,17 @@ Advanced:
 
   --crop-len -- number of nucleotides to crop from end of reads
       originating from a non-specific amplicon.
-      Default: 'auto' (maximum primer len).
+      Default: 'auto' (maximum primer length).
 
   --primer-5ext -- size of 5' primer coordinates extention.
       Low (< 2 bp) values of this parameter may result in extra major alignments
       classified as uncertain, and vice versa for high values (> 10 bp).
       Default: 5 bp.
+
+  --use-index -- Whether to use BLAST index.
+      Permitted values: auto, true, false.
+      "auto": true for megablast and blastn, false for dc-megablast.
+      Default: auto.
 ```
 
 ### Examples

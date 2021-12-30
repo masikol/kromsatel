@@ -1,7 +1,8 @@
 
 import src.fasta
-from src.printing import print_err, getwt
 from src.alignment import Alignment
+from src.orientation import LEFT, RIGHT
+from src.printing import print_err, getwt
 from src.platform import platf_depend_exit
 
 
@@ -47,7 +48,7 @@ class PrimerScheme:
 
     def find_left_primer_by_coord(self, coord):
         for i, pair in enumerate(self.primer_pairs):
-            if self.check_coord_within_primer(coord, i, left=True):
+            if self.check_coord_within_primer(coord, i, orientation=LEFT):
                 return i
             # end if
         # end for
@@ -56,20 +57,20 @@ class PrimerScheme:
 
     def find_right_primer_by_coord(self, coord):
         for i, pair in enumerate(self.primer_pairs):
-            if self.check_coord_within_primer(coord, i, left=False):
+            if self.check_coord_within_primer(coord, i, orientation=RIGHT):
                 return i
             # end if
         # end for
         return None
     # end def
 
-    def check_coord_within_primer(self, coord, primer_pair_number, left=True):
+    def check_coord_within_primer(self, coord, primer_pair_number, orientation):
 
         if primer_pair_number < 0 or primer_pair_number > len(self.primer_pairs)-1:
             return False
         # end if
 
-        if left:
+        if orientation == LEFT:
             primer = self.primer_pairs[primer_pair_number].left_primer
         else:
             primer = self.primer_pairs[primer_pair_number].right_primer
@@ -112,7 +113,7 @@ class PrimerScheme:
                     left_start, left_end = self._find_primer_anneal_coords(
                         left_primer_seq,
                         reference_seq,
-                        left=True,
+                        orientation=LEFT,
                         beg=find_start_pos
                     )
                     find_start_pos = left_start
@@ -120,7 +121,7 @@ class PrimerScheme:
                     right_start, right_end = self._find_primer_anneal_coords(
                         _reverse_complement(right_primer_seq),
                         reference_seq,
-                        left=False,
+                        orientation=RIGHT,
                         beg=find_start_pos
                     )
 
@@ -177,7 +178,7 @@ class PrimerScheme:
     # end def _parse_primer_from_csv_line
 
 
-    def _find_primer_anneal_coords(self, primer_seq, reference_seq, left=True, beg=0):
+    def _find_primer_anneal_coords(self, primer_seq, reference_seq, orientation, beg=0):
 
         start = reference_seq.find(primer_seq, beg)
 
@@ -187,7 +188,7 @@ class PrimerScheme:
 
         end = start + len(primer_seq) - 1
 
-        if left:
+        if orientation == LEFT:
             start = start - self.primer_ext_len
         else:
             end   =   end + self.primer_ext_len

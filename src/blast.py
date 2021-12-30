@@ -31,8 +31,16 @@ def get_blastplus_dependencies(krosatel_args):
 # end def
 
 
-def if_use_index(blast_task):
+def check_use_index(blast_task, use_index):
+    if use_index and blast_task == BLAST_TASKS[1]:
+        raise ValueError(
+            '\nError: BLAST cannot use index with dc-megablast.'
+        )
+    # end if
+# end def
 
+
+def detect_auto_use_index(blast_task):
     # `megablast` and `blastn` support indexed searches
     # `dc-megablast` does not
     megablast, discomegablast, blastn = range(3)
@@ -158,9 +166,15 @@ def _index_database(db_fpath):
 # end def
 
 
-def _configure_blastn_cmd_illumina(query_fpath, db_fpath, blast_task, alignment_fpath):
+def _configure_blastn_cmd_illumina(query_fpath, db_fpath, blast_task, use_index, alignment_fpath):
 
     outfmt = 15 # Single-file BLAST JSON
+
+    if use_index:
+        use_index_opt_value = 'true'
+    else:
+        use_index_opt_value = 'false'
+    # end if
 
     blast_cmd = ' '.join(
         [
@@ -168,6 +182,7 @@ def _configure_blastn_cmd_illumina(query_fpath, db_fpath, blast_task, alignment_
             '-query {}'.format(query_fpath),
             '-db {}'.format(db_fpath),
             '-task {}'.format(blast_task),
+            '-use_index {}'.format(use_index_opt_value),
             '-evalue 1e-3',
             '-gapopen 3 -gapextend 1',
             '-max_hsps 1', '-max_target_seqs 1',
@@ -180,9 +195,15 @@ def _configure_blastn_cmd_illumina(query_fpath, db_fpath, blast_task, alignment_
 # end def
 
 
-def _configure_blastn_cmd_nanopore(query_fpath, db_fpath, blast_task, alignment_fpath):
+def _configure_blastn_cmd_nanopore(query_fpath, db_fpath, blast_task, use_index, alignment_fpath):
 
     outfmt = 15 # Single-file BLAST JSON
+
+    if use_index:
+        use_index_opt_value = 'true'
+    else:
+        use_index_opt_value = 'false'
+    # end if
 
     blast_cmd = ' '.join(
         [
@@ -190,6 +211,7 @@ def _configure_blastn_cmd_nanopore(query_fpath, db_fpath, blast_task, alignment_
             '-query {}'.format(query_fpath),
             '-db {}'.format(db_fpath),
             '-task {}'.format(blast_task),
+            '-use_index {}'.format(use_index_opt_value),
             '-evalue 1e-3',
             '-max_hsps 3', '-max_target_seqs 1',
             '-outfmt {}'.format(outfmt),
@@ -220,6 +242,7 @@ def blast_align(reads_chunk, kromsatel_args):
             query_fpath,
             kromsatel_args['db_fpath'],
             kromsatel_args['blast_task'],
+            kromsatel_args['use_index'],
             alignment_fpath
         )
     else:
@@ -227,6 +250,7 @@ def blast_align(reads_chunk, kromsatel_args):
             query_fpath,
             kromsatel_args['db_fpath'],
             kromsatel_args['blast_task'],
+            kromsatel_args['use_index'],
             alignment_fpath
         )
     # end if

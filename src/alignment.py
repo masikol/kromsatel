@@ -93,16 +93,13 @@ class Alignment:
     # end def
 
     def __repr__(self):
-        # return '{}\nQ:[{}-{}];R:[{}-{}];({})\nQgaps:{}\nRgaps:{}' \
         return 'Q:[{}-{}];R:[{}-{}];({})' \
             .format(
                 self.query_from,
                 self.query_to,
                 self.ref_from,
                 self.ref_to,
-                '+' if self.align_strand_plus else '-'#,
-                # self.query_gap_locations,
-                # self.ref_gap_locations
+                '+' if self.align_strand_plus else '-'
             )
     # end def
 # end class
