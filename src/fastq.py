@@ -1,4 +1,6 @@
 
+import os
+
 from src.filesystem import OPEN_FUNCS, FORMATTING_FUNCS
 
 
@@ -41,6 +43,8 @@ def form_chunk(fastq_file, chunk_size, fmt_func):
     # end for
 
     not_none = lambda x: not x is None
+
+    print('Chunk formed', os.getpid())
 
     return tuple(filter(not_none, fq_chunk)), eof
 # end def form_chunk
@@ -89,8 +93,8 @@ def fastq_chunks_paired(forward_read_fpath, reverse_read_fpath, chunk_size):
 
         while not eof:
 
-            forward_chunk, eof = form_chunk(forward_file, chunk_size, fmt_func_forward)
-            reverse_chunk, eof = form_chunk(reverse_file, chunk_size, fmt_func_reverse)
+            forward_chunk, f_eof = form_chunk(forward_file, chunk_size, fmt_func_forward)
+            reverse_chunk, r_eof = form_chunk(reverse_file, chunk_size, fmt_func_reverse)
 
             if len(forward_chunk) == 0 or len(reverse_chunk) == 0:
                 return
@@ -98,7 +102,7 @@ def fastq_chunks_paired(forward_read_fpath, reverse_read_fpath, chunk_size):
 
             yield (forward_chunk, reverse_chunk)
 
-            if eof:
+            if f_eof or r_eof:
                 return
             # end if
         # end while
@@ -118,9 +122,9 @@ def write_fastq2fasta(reads_chunk, query_fpath):
 
 def write_fastq_record(fq_record, outfile):
     # `outfile` should be opened for appending
-        outfile.write('@{}\n{}\n{}\n{}\n'.format(
-            fq_record['seq_id'].replace(SPACE_HOLDER, ' '),
-            fq_record['seq'], fq_record['cmnt'], fq_record['qual']
-            )
+    outfile.write('@{}\n{}\n{}\n{}\n'.format(
+        fq_record['seq_id'].replace(SPACE_HOLDER, ' '),
+        fq_record['seq'], fq_record['cmnt'], fq_record['qual']
         )
+    )
 # end def

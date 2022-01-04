@@ -1,5 +1,4 @@
 
-import functools
 import multiprocessing as mp
 
 import src.fastq
@@ -189,8 +188,7 @@ class UnpairedReadsCleaner(ReadsCleaner):
 
     def clean_reads(self):
 
-        reads_chunks = functools.partial(
-            src.fastq.fastq_chunks_unpaired,
+        reads_chunks = src.fastq.fastq_chunks_unpaired(
             fq_fpath=self.args['reads_unpaired'],
             chunk_size=self.args['chunk_size']
         )
@@ -199,12 +197,14 @@ class UnpairedReadsCleaner(ReadsCleaner):
 
         # Proceed
         with mp.Pool(self.threads) as pool:
-            pool.starmap(
+            task_iterator = pool.imap(
                 self._clean_unpaired_chunk,
-                (
-                    (reads_chunk,) for reads_chunk in reads_chunks()
-                )
+                reads_chunks,
+                chunksize=1
             )
+            for task in task_iterator:
+                pass
+            # end for
         # end with
 
         pool.close()
@@ -387,8 +387,7 @@ class PairedReadsCleaner(ReadsCleaner):
 
     def clean_reads(self):
 
-        reads_chunks = functools.partial(
-            src.fastq.fastq_chunks_paired,
+        reads_chunks = src.fastq.fastq_chunks_paired(
             forward_read_fpath=self.args['reads_R1'],
             reverse_read_fpath=self.args['reads_R2'],
             chunk_size=self.args['chunk_size']
@@ -398,12 +397,14 @@ class PairedReadsCleaner(ReadsCleaner):
 
         # Proceed
         with mp.Pool(self.threads) as pool:
-            pool.starmap(
+            task_iterator = pool.imap(
                 self._clean_paired_chunk,
-                (
-                    (reads_chunk,) for reads_chunk in reads_chunks()
-                )
+                reads_chunks,
+                chunksize=1
             )
+            for task in task_iterator:
+                pass
+            # end for
         # end with
 
         pool.close()

@@ -165,7 +165,7 @@ def handle_cl_args():
             else:
                 print_err('\nError: invalid argument passed with option {}'.format(opt))
                 print_err('Permitted values: `true`, `false`, `auto`. Default: `auto`.')
-                print_err('Your value: `{}`').format(arg)
+                print_err('Your value: `{}`'.format(arg))
                 platf_depend_exit(1)
             # end if
 
