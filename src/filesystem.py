@@ -8,15 +8,38 @@ from src.printing import print_err
 from src.platform import platf_depend_exit
 
 
-# For opening plain text and gzipped files
-OPEN_FUNCS = (open, gzip.open)
+def open_file_may_by_gzipped(fpath, mode='rt'):
+    file_is_gzipped = is_gzipped(fpath)
 
-# Data from plain text and gzipped should be parsed in different way,
-#   because data from .gz is read as 'bytes', not 'str'.
-FORMATTING_FUNCS = (
-    lambda line: line.strip(),   # format text line
-    lambda line: line.decode('utf-8').strip()  # format gzipped line
-)
+    if file_is_gzipped:
+        open_func = gzip.open
+    else:
+        open_func = open
+    # end if
+
+    return open_func(fpath, mode)
+# end def
+
+
+def is_gzipped(fpath):
+    if fpath.endswith('.gz'):
+        try:
+            with gzip.open(fpath) as _:
+                pass
+            # end with
+        except gzip.BadGzipFile as err:
+            print_err('\nError: bad gzip file: {}'.format(err))
+            platf_depend_exit(1)
+        except OSError as err:
+            print_err('\nError: cannot open file: {}'.format(err))
+            platf_depend_exit(1)
+        # end try
+    else:
+        return False
+    # end if
+
+    return True
+# end def
 
 
 def rm_temp_file(file_path):

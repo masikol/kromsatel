@@ -130,10 +130,14 @@ class ReadsCleaner:
     # end def
 
     def _trim_read(self, read, alignment):
-        read_copy = read.copy()
+
+        read_copy = read.get_copy()
+
         new_start, new_end = alignment.query_from, alignment.query_to+1
-        read_copy['seq']  = read_copy['seq'] [new_start : new_end]
-        read_copy['qual'] = read_copy['qual'][new_start : new_end]
+
+        read_copy.seq         = read_copy.seq[new_start : new_end]
+        read_copy.quality_str = read_copy.quality_str[new_start : new_end]
+
         return read_copy
     # end def
 
@@ -224,7 +228,7 @@ class UnpairedReadsCleaner(ReadsCleaner):
 
         for read in reads_chunk:
 
-            read_alignments = alignments[read['seq_id']]
+            read_alignments = alignments[read.header]
 
             if len(read_alignments) == 0:
                 continue
@@ -306,7 +310,7 @@ class UnpairedReadsCleaner(ReadsCleaner):
 
                 if read_survives:
                     read_to_write = self._trim_read(read, alignment)
-                    read_to_write['seq_id'] = self._modify_read_name(read_to_write['seq_id'], alignment)
+                    read_to_write = self._modify_read_name(read_to_write, alignment)
 
                     # Binning
                     if classification == MAJOR:
@@ -367,11 +371,13 @@ class UnpairedReadsCleaner(ReadsCleaner):
         return alignment
     # end def
 
-    def _modify_read_name(self, read_name, alignment):
-        identifier = read_name.partition(src.fastq.SPACE_HOLDER)[0]
+    def _modify_read_name(self, read, alignment):
+        identifier = read.get_seqid()
         modified_identifier = '{}_{}-{}' \
             .format(identifier, alignment.query_from, alignment.query_to)
-        return read_name.replace(identifier, modified_identifier)
+
+        read.header = read.header.replace(identifier, modified_identifier)
+        return read
     # end def
 # end class
 
@@ -431,8 +437,8 @@ class PairedReadsCleaner(ReadsCleaner):
 
         for forward_read, reverse_read in zip(*reads_chunk):
 
-            forward_alignment = forward_alignments[forward_read['seq_id']]
-            reverse_alignment = reverse_alignments[reverse_read['seq_id']]
+            forward_alignment = forward_alignments[forward_read.header]
+            reverse_alignment = reverse_alignments[reverse_read.header]
 
             if forward_alignment is None or reverse_alignment is None:
                 continue
