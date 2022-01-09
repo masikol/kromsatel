@@ -54,9 +54,9 @@ class Progress:
         print_arrow = progress_line_len != bar_len
         if print_arrow:
             arrow = '>'
-            progress_line_len -= 1
         else:
             arrow = ''
+            progress_line_len += 1
         # end if
 
         sys.stdout.write(

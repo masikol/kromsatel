@@ -44,8 +44,6 @@ def form_chunk(fastq_file, chunk_size, fmt_func):
 
     not_none = lambda x: not x is None
 
-    print('Chunk formed', os.getpid())
-
     return tuple(filter(not_none, fq_chunk)), eof
 # end def form_chunk
 
