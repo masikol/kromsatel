@@ -17,18 +17,18 @@ from src.binning import MAJOR, MINOR, UNCERTAIN
 
 class ReadsCleaner:
 
-    def __init__(self, args):
-        self.args = args
+    def __init__(self, kromsatel_args):
+        self.kromsatel_args = kromsatel_args
 
-        self.MIN_LEN = args['min_len']
-        self.threads = args['n_thr']
+        self.MIN_LEN = kromsatel_args.min_len
+        self.threads = kromsatel_args.threads_num
 
-        self.primer_scheme = prm.PrimerScheme(args)
+        self.primer_scheme = prm.PrimerScheme(kromsatel_args)
 
-        if self.args['fixed_crop_len'] == 'auto':
+        if self.kromsatel_args.fixed_crop_len == 'auto':
             self.FIXED_CROP_LEN = self.primer_scheme.max_primer_len
         else:
-            self.FIXED_CROP_LEN = args['fixed_crop_len']
+            self.FIXED_CROP_LEN = kromsatel_args.fixed_crop_len
         # end if
     # end def
 
@@ -181,10 +181,10 @@ class ReadsCleaner:
 # end class
 
 
-class UnpairedReadsCleaner(ReadsCleaner):
+class NanoporeReadsCleaner(ReadsCleaner):
 
-    def __init__(self, args):
-        super().__init__(args)
+    def __init__(self, kromsatel_args):
+        super().__init__(kromsatel_args)
         num_reads_total = self._count_reads()
         self.progress = Progress(num_reads_total)
     # end def
@@ -193,8 +193,8 @@ class UnpairedReadsCleaner(ReadsCleaner):
     def clean_reads(self):
 
         reads_chunks = src.fastq.fastq_chunks_unpaired(
-            fq_fpath=self.args['reads_unpaired'],
-            chunk_size=self.args['chunk_size']
+            fq_fpath=self.kromsatel_args.unpaired_read_fpath,
+            chunk_size=self.kromsatel_args.chunk_size
         )
 
         self.progress.print_status_bar()
@@ -221,10 +221,10 @@ class UnpairedReadsCleaner(ReadsCleaner):
 
     def _clean_unpaired_chunk(self, reads_chunk):
         alignments = parse_alignments_nanopore(
-            src.blast.blast_align(reads_chunk, self.args)
+            src.blast.blast_align(reads_chunk, self.kromsatel_args)
         )
 
-        binner = UnpairedBinner(self.args['output'])
+        binner = UnpairedBinner(self.kromsatel_args.output)
 
         for read in reads_chunk:
 
@@ -347,7 +347,7 @@ class UnpairedReadsCleaner(ReadsCleaner):
 
     def _count_reads(self):
         print('{} - Counting reads...'.format(getwt()))
-        num_reads_total = src.fastq.count_reads(self.args['reads_unpaired'])
+        num_reads_total = src.fastq.count_reads(self.kromsatel_args.unpaired_read_fpath)
         print('{} - {} reads.'.format(getwt(), num_reads_total))
         return num_reads_total
     # end def
@@ -382,10 +382,10 @@ class UnpairedReadsCleaner(ReadsCleaner):
 # end class
 
 
-class PairedReadsCleaner(ReadsCleaner):
+class IlluminaPEReadsCleaner(ReadsCleaner):
 
-    def __init__(self, args):
-        super().__init__(args)
+    def __init__(self, kromsatel_args):
+        super().__init__(kromsatel_args)
         num_reads_total = self._count_reads()
         self.progress = Progress(num_reads_total)
     # end def
@@ -394,9 +394,9 @@ class PairedReadsCleaner(ReadsCleaner):
     def clean_reads(self):
 
         reads_chunks = src.fastq.fastq_chunks_paired(
-            forward_read_fpath=self.args['reads_R1'],
-            reverse_read_fpath=self.args['reads_R2'],
-            chunk_size=self.args['chunk_size']
+            forward_read_fpath=self.kromsatel_args.forward_read_fpath,
+            reverse_read_fpath=self.kromsatel_args.reverse_read_fpath,
+            chunk_size=self.kromsatel_args.chunk_size
         )
 
         self.progress.print_status_bar()
@@ -425,15 +425,15 @@ class PairedReadsCleaner(ReadsCleaner):
 
         forward_chunk = reads_chunk[0]
         forward_alignments = parse_alignments_illumina(
-            src.blast.blast_align(forward_chunk, self.args)
+            src.blast.blast_align(forward_chunk, self.kromsatel_args)
         )
 
         reverse_chunk = reads_chunk[1]
         reverse_alignments = parse_alignments_illumina(
-            src.blast.blast_align(reverse_chunk, self.args)
+            src.blast.blast_align(reverse_chunk, self.kromsatel_args)
         )
 
-        binner = PairedBinner(self.args['output'])
+        binner = PairedBinner(self.kromsatel_args.output)
 
         for forward_read, reverse_read in zip(*reads_chunk):
 
@@ -594,7 +594,7 @@ class PairedReadsCleaner(ReadsCleaner):
 
     def _count_reads(self):
         print('{} - Counting reads...'.format(getwt()))
-        num_reads_total = src.fastq.count_reads(self.args['reads_R1'])
+        num_reads_total = src.fastq.count_reads(self.kromsatel_args.forward_read_fpath)
         print('{} - {} read pairs.'.format(getwt(), num_reads_total))
         return num_reads_total
     # end def

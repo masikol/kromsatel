@@ -82,5 +82,4 @@ class Progress:
         # end try
         return bar_len
     # end def
-
 # end class

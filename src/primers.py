@@ -38,13 +38,13 @@ def _complement_base(base):
 class PrimerScheme:
 
     def __init__(self, kromsatel_args):
-        self.primers_fpath = kromsatel_args['primers_fpath']
-        self.reference_fpath = kromsatel_args['reference_fpath']
-        self.primer_ext_len = kromsatel_args['primer_ext_len']
+        self.primers_fpath = kromsatel_args.primers_fpath
+        self.reference_fpath = kromsatel_args.reference_fpath
+        self.primer_ext_len = kromsatel_args.primer_ext_len
 
         self.max_primer_len = 0
         self.primer_pairs = self._parse_primers()
-    # end def __init__
+    # end def
 
     def find_left_primer_by_coord(self, coord):
         for i, pair in enumerate(self.primer_pairs):
@@ -142,7 +142,7 @@ class PrimerScheme:
         print('{} - Primers: found annealing coordinates'.format(getwt()))
 
         return primer_pairs
-    # end def parse_primers
+    # end def
 
 
     def _parse_primer_pair(self, primers_file, sep):
@@ -158,7 +158,7 @@ class PrimerScheme:
         )
 
         return left_primer_seq, right_primer_seq
-    # end def _parse_primer_pair
+    # end def
 
     def _parse_primer_from_csv_line(self, primer_line, sep=','):
         line_vals = primer_line.strip().split(sep)
@@ -175,7 +175,7 @@ class PrimerScheme:
         primer_seq  = line_vals[1]
 
         return primer_seq
-    # end def _parse_primer_from_csv_line
+    # end def
 
 
     def _find_primer_anneal_coords(self, primer_seq, reference_seq, orientation, beg=0):
@@ -196,14 +196,14 @@ class PrimerScheme:
 
         return start, end
     # end def
-# end class PrimerScheme
+# end class
 
 
 class PrimerPair:
     def __init__(self, left_primer, right_primer):
         self.left_primer = left_primer
         self.right_primer = right_primer
-    # end def __init__
+    # end def
 
     def __repr__(self):
         return '[{}, {}]; [{}, {}];' \
@@ -211,13 +211,13 @@ class PrimerPair:
                 self.left_primer.start,  self.left_primer.end,
                 self.right_primer.start, self.right_primer.end
             )
-    # end def __repr__
-# end class PrimerPair
+    # end def
+# end class
 
 
 class Primer:
     def __init__(self, start, end):
         self.start = start # 0-based, left-closed
         self.end   = end   # 0-based, right-closed
-    # end def __init__
-# end class Primer
+    # end def
+# end class

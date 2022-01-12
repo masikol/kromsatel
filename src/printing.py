@@ -6,11 +6,10 @@ START_TIME = time() # consider time of importing as start time
 
 
 def getwt():
-    # Function (get work time) returns time HH:MM:SS that has passed from start_time.
     return strftime('%H:%M:%S', gmtime( time() - START_TIME))
-# end def getwt
+# end def
 
 
 def print_err(text=''):
     print(text, file=sys.stderr)
-# end def print_err
+# end def

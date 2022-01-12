@@ -105,14 +105,10 @@ class Alignment:
 # end class
 
 
-class NoAlignmentError(Exception):
-    pass
-# end class
-
-
-def _find_gap_locations(sequence, gap='-'):
-    gap_locations = tuple(
-        (match.start() for match in re.finditer(gap, sequence))
-    )
-    return gap_locations
-# end def
+# TODO: temporarily disabled
+# def _find_gap_locations(sequence, gap='-'):
+#     gap_locations = tuple(
+#         (match.start() for match in re.finditer(gap, sequence))
+#     )
+#     return gap_locations
+# # end def

@@ -15,6 +15,11 @@ BLAST_TASKS = (
     'blastn',
 )
 
+TASKS_SUPPORT_INDEXED_SEARCH = {
+    BLAST_TASKS[0],
+    BLAST_TASKS[2],
+}
+
 
 def get_blastplus_dependencies(krosatel_args):
 
@@ -23,47 +28,11 @@ def get_blastplus_dependencies(krosatel_args):
         'makeblastdb'
     ]
 
-    if krosatel_args['use_index']:
+    if krosatel_args.use_index:
         dependencies.append('makembindex')
     # end if
 
     return dependencies
-# end def
-
-
-def check_use_index(blast_task, use_index):
-    if use_index and blast_task == BLAST_TASKS[1]:
-        raise ValueError(
-            '\nError: BLAST cannot use index with dc-megablast.'
-        )
-    # end if
-# end def
-
-
-def detect_auto_use_index(blast_task):
-    # `megablast` and `blastn` support indexed searches
-    # `dc-megablast` does not
-    megablast, discomegablast, blastn = range(3)
-    blast_tasks_use_index = (
-        BLAST_TASKS[megablast],
-        BLAST_TASKS[blastn],
-    )
-    blast_tasks_dont_use_index = (
-        BLAST_TASKS[discomegablast],
-    )
-
-    if blast_task in blast_tasks_use_index:
-        return True
-    elif blast_task in blast_tasks_dont_use_index:
-        return False
-    else:
-        raise ValueError(
-            'Invalid name of a blast task: {}.\n  Allowed values: {}'.format(
-                blast_task,
-                ', '.join(BLAST_TASKS)
-            )
-        )
-    # end if
 # end def
 
 
@@ -116,15 +85,15 @@ def _configure_makembindex_cmd(db_fpath):
 
 def create_reference_database(kromsatel_args):
 
-    db_dirpath = os.path.join(kromsatel_args['outdir'], 'blast_database')
+    db_dirpath = os.path.join(kromsatel_args.outdir_path, 'blast_database')
     fs.create_dir(db_dirpath)
     db_fpath = os.path.join(db_dirpath, 'kromsatel_blast_database')
 
     print('{} - Creating the reference database for BLAST:\n  `{}`...'.format(getwt(), db_fpath))
-    _make_blast_db(kromsatel_args['reference_fpath'], db_fpath)
+    _make_blast_db(kromsatel_args.reference_fpath, db_fpath)
     print('{} - Database: created'.format(getwt()))
 
-    if kromsatel_args['use_index']:
+    if kromsatel_args.use_index:
         print('{} - Indexing the database...'.format(getwt()))
         _index_database(db_fpath)
         print('{} - Indexing: done'.format(getwt()))
@@ -226,31 +195,31 @@ def _configure_blastn_cmd_nanopore(query_fpath, db_fpath, blast_task, use_index,
 def blast_align(reads_chunk, kromsatel_args):
 
     query_fpath = os.path.join(
-        kromsatel_args['tmp_dir'],
+        kromsatel_args.tmp_dir_path,
         'kromsatel_query_{}.fasta'.format(os.getpid())
     )
 
     src.fastq.write_fastq2fasta(reads_chunk, query_fpath)
 
     alignment_fpath = os.path.join(
-        kromsatel_args['tmp_dir'],
+        kromsatel_args.tmp_dir_path,
         'kromsatel_alignment_{}.json'.format(os.getpid())
     )
 
-    if kromsatel_args['paired_mode']:
+    if kromsatel_args.paired_mode:
         blast_cmd = _configure_blastn_cmd_illumina(
             query_fpath,
-            kromsatel_args['db_fpath'],
-            kromsatel_args['blast_task'],
-            kromsatel_args['use_index'],
+            kromsatel_args.db_fpath,
+            kromsatel_args.blast_task,
+            kromsatel_args.use_index,
             alignment_fpath
         )
     else:
         blast_cmd = _configure_blastn_cmd_nanopore(
             query_fpath,
-            kromsatel_args['db_fpath'],
-            kromsatel_args['blast_task'],
-            kromsatel_args['use_index'],
+            kromsatel_args.db_fpath,
+            kromsatel_args.blast_task,
+            kromsatel_args.use_index,
             alignment_fpath
         )
     # end if
@@ -265,13 +234,13 @@ def blast_align(reads_chunk, kromsatel_args):
         platf_depend_exit(1)
     # end if
 
-    fs.rm_temp_file(query_fpath)
+    fs.rm_file_warn_on_error(query_fpath)
 
     with open(alignment_fpath, 'rt') as alignment_file:
         aligmnents = json.load(alignment_file)
     # end with
 
-    fs.rm_temp_file(alignment_fpath)
+    fs.rm_file_warn_on_error(alignment_fpath)
 
     return aligmnents['BlastOutput2']
 # end def blast_align

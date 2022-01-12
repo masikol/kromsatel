@@ -42,11 +42,11 @@ def is_gzipped(fpath):
 # end def
 
 
-def rm_temp_file(file_path):
+def rm_file_warn_on_error(file_path):
     try:
         os.unlink(file_path)
     except OSError as oserr:
-        print_err('Warning: Cannot remove temporary file `{}`'.format(file_path))
+        print_err('\nWarning: Cannot remove file `{}`'.format(file_path))
         print_err( str(oserr) )
     # end try
 # end def
@@ -85,18 +85,12 @@ def init_file(fpath):
 
 def create_dir(dirpath):
     if not os.path.exists(dirpath):
-        try:
-            os.makedirs(dirpath)
-        except OSError as err:
-            print_err('\nError: cannot create directory `{}`'.format(dirpath))
-            print_err(str(err))
-            platf_depend_exit(1)
-        # end try
+        os.makedirs(dirpath)
     # end if
-# end def create_dir
+# end def
 
 
-def rm_tmp_dir(dirpath):
+def try_rm_directory(dirpath):
     try:
         shutil.rmtree(dirpath)
     except OSError as err:
@@ -104,3 +98,4 @@ def rm_tmp_dir(dirpath):
         print_err(str(err))
     # end try
 # end def
+

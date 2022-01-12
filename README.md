@@ -92,8 +92,8 @@ Advanced:
 
   --use-index -- Whether to use BLAST index.
       Permitted values: auto, true, false.
-      "auto": true for megablast and blastn, false for dc-megablast.
-      Default: auto.
+      "auto" mode: true for megablast and blastn, false for dc-megablast.
+      Default: false.
 ```
 
 ### Examples

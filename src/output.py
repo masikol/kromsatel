@@ -6,10 +6,10 @@ import src.filesystem as fs
 
 class UnpairedOutput:
 
-    def __init__(self, args):
-        self.outdir = args['outdir']
+    def __init__(self, kromsatel_args):
+        self.outdir = kromsatel_args.outdir_path
         self.input_basename = fs.rm_fastq_extention(
-            os.path.basename(args['reads_unpaired'])
+            os.path.basename(kromsatel_args.unpaired_read_fpath)
         )
 
         self.major_outfpath = None
@@ -62,10 +62,10 @@ class UnpairedOutput:
 
 class PairedOutput:
 
-    def __init__(self, args):
-        self.outdir = args['outdir']
+    def __init__(self, kromsatel_args):
+        self.outdir = kromsatel_args.outdir_path
         self.input_basename = fs.rm_fastq_extention(
-            os.path.basename(args['reads_R1'])
+            os.path.basename(kromsatel_args.forward_read_fpath)
         )
         self.sample_name = self._get_sample_name()
 
