@@ -1,7 +1,7 @@
 
 import src.fasta
 from src.alignment import Alignment
-from src.orientation import LEFT, RIGHT
+from src.orientation import Orientation
 from src.printing import print_err, getwt
 from src.platform import platf_depend_exit
 
@@ -48,7 +48,7 @@ class PrimerScheme:
 
     def find_left_primer_by_coord(self, coord):
         for i, pair in enumerate(self.primer_pairs):
-            if self.check_coord_within_primer(coord, i, orientation=LEFT):
+            if self.check_coord_within_primer(coord, i, Orientation.LEFT):
                 return i
             # end if
         # end for
@@ -57,7 +57,7 @@ class PrimerScheme:
 
     def find_right_primer_by_coord(self, coord):
         for i, pair in enumerate(self.primer_pairs):
-            if self.check_coord_within_primer(coord, i, orientation=RIGHT):
+            if self.check_coord_within_primer(coord, i, Orientation.RIGHT):
                 return i
             # end if
         # end for
@@ -70,12 +70,24 @@ class PrimerScheme:
             return False
         # end if
 
-        if orientation == LEFT:
-            primer = self.primer_pairs[primer_pair_number].left_primer
-        else:
-            primer = self.primer_pairs[primer_pair_number].right_primer
-        # end if
+        primer = self.get_primer(primer_pair_number, orientation)
+
         return primer.start <= coord <= primer.end
+    # end def
+
+    def get_primer(self, primer_pair_number, orientation):
+
+        try:
+            if orientation == Orientation.LEFT:
+                primer = self.primer_pairs[primer_pair_number].left_primer
+            else:
+                primer = self.primer_pairs[primer_pair_number].right_primer
+            # end if
+        except TypeError:
+            return None
+        # end try
+
+        return primer
     # end def
 
     def _parse_primers(self):
@@ -113,7 +125,7 @@ class PrimerScheme:
                     left_start, left_end = self._find_primer_anneal_coords(
                         left_primer_seq,
                         reference_seq,
-                        orientation=LEFT,
+                        Orientation.LEFT,
                         beg=find_start_pos
                     )
                     find_start_pos = left_start
@@ -121,7 +133,7 @@ class PrimerScheme:
                     right_start, right_end = self._find_primer_anneal_coords(
                         _reverse_complement(right_primer_seq),
                         reference_seq,
-                        orientation=RIGHT,
+                        Orientation.RIGHT,
                         beg=find_start_pos
                     )
 
@@ -188,7 +200,7 @@ class PrimerScheme:
 
         end = start + len(primer_seq) - 1
 
-        if orientation == LEFT:
+        if orientation == Orientation.LEFT:
             start = start - self.primer_ext_len
         else:
             end   =   end + self.primer_ext_len

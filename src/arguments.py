@@ -99,6 +99,7 @@ class KromsatelArgs:
         self._set_reference_fpath()
         self._set_outdpath()
         self._set_min_len()
+        self._set_threads_num()
         self._set_blast_task()
         self._set_fixed_crop_len()
         self._set_primer_ext_len()
@@ -151,6 +152,12 @@ class KromsatelArgs:
             min_len_string = self.argparse_args.min_len
             self.min_len = int(min_len_string)
         # end if
+    # end def
+
+    def _set_threads_num(self):
+        if not self.argparse_args.threads is None:
+            num_threads_string = self.argparse_args.threads
+            self.threads_num = int(num_threads_string)
     # end def
 
     def _set_blast_task(self):

@@ -4,11 +4,6 @@ import gzip
 from src.fastq import write_fastq_record
 
 
-MAJOR        = 0
-MINOR        = 1
-UNCERTAIN = 2
-
-
 class UnpairedBinner:
 
     def __init__(self, unpaired_output):

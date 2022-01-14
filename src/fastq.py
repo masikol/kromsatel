@@ -26,6 +26,10 @@ class FastqRecord:
             self.comment, self.quality_str
         )
     # end def
+
+    def __len__(self):
+        return len(self.seq)
+    # end def
 # end class
 
 

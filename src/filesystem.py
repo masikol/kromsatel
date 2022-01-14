@@ -67,7 +67,7 @@ def rm_fastq_extention(fpath):
     # end if
 
     return os.path.join(dirname, new_basename)
-# end def rm_fastq_extention
+# end def
 
 
 def init_file(fpath):
@@ -80,7 +80,7 @@ def init_file(fpath):
         print_err(str(err))
         platf_depend_exit(1)
     # end try
-# end def init_file
+# end def
 
 
 def create_dir(dirpath):
@@ -98,4 +98,3 @@ def try_rm_directory(dirpath):
         print_err(str(err))
     # end try
 # end def
-

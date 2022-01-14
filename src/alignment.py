@@ -88,9 +88,10 @@ class Alignment:
         # end if
     # end def
 
-    def get_align_len(self):
-        return max(0, self.query_to - self.query_from)
-    # end def
+    # TODO: remove completely
+    # def get_align_len(self):
+    #     return max(0, self.query_to - self.query_from)
+    # # end def
 
     def __repr__(self):
         return 'Q:[{}-{}];R:[{}-{}];({})' \
