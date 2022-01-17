@@ -87,8 +87,6 @@ class NanoporeReadsClassifier(ReadsClassifier):
                 # end if
             # end for
         # end for
-
-        return binner
     # end def
 
     def _check_overlap(self, aligment, non_ovl_query_spans):
@@ -242,8 +240,6 @@ class IlluminaPEReadsClassifier(ReadsClassifier):
                 binner
             )
         # end for
-
-        return binner
     # end def
 
     def _classify_read_pair(self, frw_alignment, rvr_alignment):

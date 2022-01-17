@@ -2,17 +2,30 @@
 import gzip
 
 from src.fastq import write_fastq_record
+from src.output import UnpairedOutput, PairedOutput
 
 
 class UnpairedBinner:
 
-    def __init__(self, unpaired_output):
+    def __init__(self, outdir_path, output_prefix):
 
-        self.output = unpaired_output
+        self.output = UnpairedOutput(outdir_path, output_prefix)
 
         self.major_reads = list()
         self.minor_reads = list()
         self.uncertain_reads = list()
+
+        self.outfpaths = (
+            self.output.major_outfpath,
+            self.output.minor_outfpath,
+            self.output.uncertain_outfpath,
+        )
+
+        self.read_collections = (
+            self.major_reads,
+            self.minor_reads,
+            self.uncertain_reads,
+        )
     # end def
 
     def add_major_read(self, read):
@@ -29,23 +42,13 @@ class UnpairedBinner:
 
     def write_binned_reads(self):
 
-        outfpaths = (
-            self.output.major_outfpath,
-            self.output.minor_outfpath,
-            self.output.uncertain_outfpath,
-        )
-
-        read_collections = (
-            self.major_reads,
-            self.minor_reads,
-            self.uncertain_reads,
-        )
-
-        for outfpath, reads in zip(outfpaths, read_collections):
+        for outfpath, reads in zip(self.outfpaths, self.read_collections):
             if len(reads) != 0:
                 self._append_to_outfile(reads, outfpath)
             # end if
         # end for
+
+        self._clear()
     # end def
 
     def _append_to_outfile(self, reads, outfpath):
@@ -55,14 +58,20 @@ class UnpairedBinner:
             # end for
         # end with
     # end def
+
+    def _clear(self):
+        for collection in self.read_collections:
+            collection.clear()
+        # end for
+    # end def
 # end class
 
 
 class PairedBinner:
 
-    def __init__(self, paired_output):
+    def __init__(self, outdir_path, output_prefix):
 
-        self.output = paired_output
+        self.output = PairedOutput(outdir_path, output_prefix)
 
         self.major_frw_reads = list()
         self.major_rvr_reads = list()
@@ -75,6 +84,22 @@ class PairedBinner:
 
         self.unpaired_frw_reads = list()
         self.unpaired_rvr_reads = list()
+
+        self.outfpaths = (
+            self.output.major_frw_outfpath,     self.output.major_rvr_outfpath,
+            self.output.minor_frw_outfpath,     self.output.minor_rvr_outfpath,
+            self.output.uncertain_frw_outfpath, self.output.uncertain_rvr_outfpath,
+            self.output.unpaired_frw_outfpath,
+            self.output.unpaired_rvr_outfpath,
+        )
+
+        self.read_collections = (
+            self.major_frw_reads,     self.major_rvr_reads,
+            self.minor_frw_reads,     self.minor_rvr_reads,
+            self.uncertain_frw_reads, self.uncertain_rvr_reads,
+            self.unpaired_frw_reads,
+            self.unpaired_rvr_reads,
+        )
     # end def
 
     def add_major_pair(self, frw_read, rvr_read):
@@ -102,27 +127,13 @@ class PairedBinner:
 
     def write_binned_reads(self):
 
-        outfpaths = (
-            self.output.major_frw_outfpath,     self.output.major_rvr_outfpath,
-            self.output.minor_frw_outfpath,     self.output.minor_rvr_outfpath,
-            self.output.uncertain_frw_outfpath, self.output.uncertain_rvr_outfpath,
-            self.output.unpaired_frw_outfpath,
-            self.output.unpaired_rvr_outfpath,
-        )
-
-        read_collections = (
-            self.major_frw_reads,        self.major_rvr_reads,
-            self.minor_frw_reads,        self.minor_rvr_reads,
-            self.uncertain_frw_reads, self.uncertain_rvr_reads,
-            self.unpaired_frw_reads,
-            self.unpaired_rvr_reads,
-        )
-
-        for outfpath, reads in zip(outfpaths, read_collections):
+        for outfpath, reads in zip(self.outfpaths, self.read_collections):
             if len(reads) != 0:
                 self._append_to_outfile(reads, outfpath)
             # end if
         # end for
+
+        self._clear()
     # end def
 
     def _append_to_outfile(self, reads, outfpath):
@@ -131,5 +142,11 @@ class PairedBinner:
                 write_fastq_record(read, outfile)
             # end for
         # end with
+    # end def
+
+    def _clear(self):
+        for collection in self.read_collections:
+            collection.clear()
+        # end for
     # end def
 # end class

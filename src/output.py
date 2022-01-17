@@ -4,13 +4,20 @@ import os
 import src.filesystem as fs
 
 
-class UnpairedOutput:
+class Output:
 
-    def __init__(self, kromsatel_args):
-        self.outdir = kromsatel_args.outdir_path
-        self.input_basename = fs.rm_fastq_extention(
-            os.path.basename(kromsatel_args.unpaired_read_fpath)
-        )
+    def __init__(self, outdir_path, output_prefix):
+        self.outdir_path = outdir_path
+        self.output_prefix = output_prefix
+    # end def
+# end class
+
+
+class UnpairedOutput(Output):
+
+    def __init__(self, outdir_path, output_prefix):
+
+        super().__init__(outdir_path, output_prefix)
 
         self.major_outfpath = None
         self._set_major_outfpath()
@@ -24,7 +31,7 @@ class UnpairedOutput:
 
     def _init_output(self):
 
-        fs.create_dir(self.outdir)
+        fs.create_dir(self.outdir_path)
 
         output_fpaths = (
             self.major_outfpath,
@@ -53,20 +60,17 @@ class UnpairedOutput:
 
     def _configure_outfpath(self, suffix):
         return os.path.join(
-            self.outdir,
-            '{}_{}.fastq.gz'.format(self.input_basename, suffix)
+            self.outdir_path,
+            '{}_{}.fastq.gz'.format(self.output_prefix, suffix)
         )
     # end def _configure_outfpath
 # end class UnpairedOutput
 
 
-class PairedOutput:
+class PairedOutput(Output):
 
-    def __init__(self, kromsatel_args):
-        self.outdir = kromsatel_args.outdir_path
-        self.input_basename = fs.rm_fastq_extention(
-            os.path.basename(kromsatel_args.frw_read_fpath)
-        )
+    def __init__(self, outdir_path, output_prefix):
+        super().__init__(outdir_path, output_prefix)
         self.sample_name = self._get_sample_name()
 
         self.major_frw_outfpath = None
@@ -86,7 +90,7 @@ class PairedOutput:
     # end def
 
     def _init_output(self):
-        fs.create_dir(self.outdir)
+        fs.create_dir(self.outdir_path)
 
         output_fpaths = (
             self.major_frw_outfpath,
@@ -130,8 +134,8 @@ class PairedOutput:
     def _get_sample_name(self):
 
         for direction in ('_R1_001', '_R2_001'):
-            if direction in self.input_basename:
-                sample_name = self.input_basename.replace(direction, '')
+            if direction in self.output_prefix:
+                sample_name = self.output_prefix.replace(direction, '')
             # end if
         # end for
         return sample_name
@@ -140,7 +144,7 @@ class PairedOutput:
     def _configure_outfpath(self, suffix, forward=True):
         direction = 'R1_001' if forward else 'R2_001'
         return os.path.join(
-            self.outdir,
+            self.outdir_path,
             '{}_{}_{}.fastq.gz'.format(self.sample_name, direction, suffix)
         )
     # end def

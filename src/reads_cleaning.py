@@ -1,7 +1,9 @@
 
+import os
 import multiprocessing as mp
 
 import src.fastq
+import src.filesystem as fs
 from src.printing import getwt
 from src.progress import Progress
 import src.synchronization as synchron
@@ -21,9 +23,9 @@ class ReadsCleaner:
         raise NotImplementedError
     # end def
 
-    def _write_output(self, binner):
+    def _write_output(self):
         with synchron.output_lock:
-            binner.write_binned_reads()
+            self.binner.write_binned_reads()
         # end with
     # end def
 
@@ -55,6 +57,11 @@ class NanoporeReadsCleaner(ReadsCleaner):
         num_reads_total = \
             _count_unpaired_reads_verbosely(self.reads_fpath)
         self.progress = Progress(num_reads_total)
+
+        output_prefix = fs.rm_fastq_extention(
+            os.path.basename(kromsatel_args.unpaired_read_fpath)
+        )
+        self.binner = UnpairedBinner(self.kromsatel_args.outdir_path, output_prefix)
     # end def
 
 
@@ -95,10 +102,9 @@ class NanoporeReadsCleaner(ReadsCleaner):
             src.blast.blast_align(reads_chunk, self.kromsatel_args)
         )
 
-        binner = UnpairedBinner(self.kromsatel_args.output)
-        binner = self.classifier.fill_binner(reads_chunk, alignments, binner)
+        self.classifier.fill_binner(reads_chunk, alignments, self.binner)
 
-        self._write_output(binner)
+        self._write_output()
         increment = len(reads_chunk)
         self._update_progress(increment)
         self._print_progress()
@@ -119,6 +125,12 @@ class IlluminaPEReadsCleaner(ReadsCleaner):
         num_reads_total = \
             _count_paired_reads_verbosely(self.frw_read_fpath)
         self.progress = Progress(num_reads_total)
+
+        output_prefix = fs.rm_fastq_extention(
+            os.path.basename(kromsatel_args.frw_read_fpath)
+        )
+
+        self.binner = PairedBinner(self.kromsatel_args.outdir_path, output_prefix)
     # end def
 
     def clean_reads(self):
@@ -157,10 +169,9 @@ class IlluminaPEReadsCleaner(ReadsCleaner):
 
         alignments = self._align_read_pairs(reads_chunk)
 
-        binner = PairedBinner(self.kromsatel_args.output)
-        binner = self.classifier.fill_binner(reads_chunk, alignments, binner)
+        self.classifier.fill_binner(reads_chunk, alignments, self.binner)
 
-        self._write_output(binner)
+        self._write_output()
         increment = len(reads_chunk[0])
         self._update_progress(increment)
         self._print_progress()

@@ -17,10 +17,6 @@ def main():
 
     _check_blastplus_dependencies(args)
 
-    # TODO: move output creation deeper
-    output = _configure_output(args)
-    args.set_output(output)
-
     db_fpath = src.blast.create_reference_database(args)
     args.set_database_path(db_fpath)
 
@@ -61,16 +57,6 @@ def _check_blastplus_dependencies(kromsatel_args):
         print_err(str(err))
         platformwise_exit(1)
     # end try
-# end def
-
-
-def _configure_output(kromsatel_args):
-    if kromsatel_args.paired_mode:
-        output = out.PairedOutput(kromsatel_args)
-    else:
-        output = out.UnpairedOutput(kromsatel_args)
-    # end if
-    return output
 # end def
 
 
