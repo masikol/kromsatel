@@ -98,23 +98,23 @@ def fastq_chunks_unpaired(fq_fpath, chunk_size):
 # end def
 
 
-def fastq_chunks_paired(forward_read_fpath, reverse_read_fpath, chunk_size):
+def fastq_chunks_paired(frw_read_fpath, rvr_read_fpath, chunk_size):
 
-    with fs.open_file_may_by_gzipped(forward_read_fpath) as forward_file, \
-         fs.open_file_may_by_gzipped(reverse_read_fpath) as reverse_file:
+    with fs.open_file_may_by_gzipped(frw_read_fpath) as frw_file, \
+         fs.open_file_may_by_gzipped(rvr_read_fpath) as rvr_file:
 
         eof = False
 
         while not eof:
 
-            forward_chunk, f_eof = form_chunk(forward_file, chunk_size)
-            reverse_chunk, r_eof = form_chunk(reverse_file, chunk_size)
+            frw_chunk, f_eof = form_chunk(frw_file, chunk_size)
+            rvr_chunk, r_eof = form_chunk(rvr_file, chunk_size)
 
-            if len(forward_chunk) == 0 or len(reverse_chunk) == 0:
+            if len(frw_chunk) == 0 or len(rvr_chunk) == 0:
                 return
             # end if
 
-            yield (forward_chunk, reverse_chunk)
+            yield (frw_chunk, rvr_chunk)
 
             eof = f_eof or r_eof
         # end while

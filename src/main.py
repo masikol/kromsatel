@@ -20,6 +20,7 @@ def main():
         src.blast.check_program(ncbi_program)
     # end for
 
+    # TODO: move output creation deeper
     output = _configure_output(args)
     args.set_output(output)
 

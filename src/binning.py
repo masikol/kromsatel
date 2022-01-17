@@ -64,58 +64,58 @@ class PairedBinner:
 
         self.output = paired_output
 
-        self.major_forward_reads = list()
-        self.major_reverse_reads = list()
+        self.major_frw_reads = list()
+        self.major_rvr_reads = list()
 
-        self.minor_forward_reads = list()
-        self.minor_reverse_reads = list()
+        self.minor_frw_reads = list()
+        self.minor_rvr_reads = list()
 
-        self.uncertain_forward_reads = list()
-        self.uncertain_reverse_reads = list()
+        self.uncertain_frw_reads = list()
+        self.uncertain_rvr_reads = list()
 
-        self.unpaired_forward_reads = list()
-        self.unpaired_reverse_reads = list()
+        self.unpaired_frw_reads = list()
+        self.unpaired_rvr_reads = list()
     # end def
 
-    def add_major_pair(self, forward_read, reverse_read):
-        self.major_forward_reads.append(forward_read)
-        self.major_reverse_reads.append(reverse_read)
+    def add_major_pair(self, frw_read, rvr_read):
+        self.major_frw_reads.append(frw_read)
+        self.major_rvr_reads.append(rvr_read)
     # end def
 
-    def add_minor_pair(self, forward_read, reverse_read):
-        self.minor_forward_reads.append(forward_read)
-        self.minor_reverse_reads.append(reverse_read)
+    def add_minor_pair(self, frw_read, rvr_read):
+        self.minor_frw_reads.append(frw_read)
+        self.minor_rvr_reads.append(rvr_read)
     # end def
 
-    def add_uncertain_pair(self, forward_read, reverse_read):
-        self.uncertain_forward_reads.append(forward_read)
-        self.uncertain_reverse_reads.append(reverse_read)
+    def add_uncertain_pair(self, frw_read, rvr_read):
+        self.uncertain_frw_reads.append(frw_read)
+        self.uncertain_rvr_reads.append(rvr_read)
     # end def
 
-    def add_forward_unpaired_read(self, read):
-        self.unpaired_forward_reads.append(read)
+    def add_frw_unpaired_read(self, read):
+        self.unpaired_frw_reads.append(read)
     # end def
 
-    def add_reverse_unpaired_read(self, read):
-        self.unpaired_reverse_reads.append(read)
+    def add_rvr_unpaired_read(self, read):
+        self.unpaired_rvr_reads.append(read)
     # end def
 
     def write_binned_reads(self):
 
         outfpaths = (
-            self.output.major_forward_outfpath,        self.output.major_reverse_outfpath,
-            self.output.minor_forward_outfpath,        self.output.minor_reverse_outfpath,
-            self.output.uncertain_forward_outfpath, self.output.uncertain_reverse_outfpath,
-            self.output.unpaired_forward_outfpath,
-            self.output.unpaired_reverse_outfpath,
+            self.output.major_frw_outfpath,     self.output.major_rvr_outfpath,
+            self.output.minor_frw_outfpath,     self.output.minor_rvr_outfpath,
+            self.output.uncertain_frw_outfpath, self.output.uncertain_rvr_outfpath,
+            self.output.unpaired_frw_outfpath,
+            self.output.unpaired_rvr_outfpath,
         )
 
         read_collections = (
-            self.major_forward_reads,        self.major_reverse_reads,
-            self.minor_forward_reads,        self.minor_reverse_reads,
-            self.uncertain_forward_reads, self.uncertain_reverse_reads,
-            self.unpaired_forward_reads,
-            self.unpaired_reverse_reads,
+            self.major_frw_reads,        self.major_rvr_reads,
+            self.minor_frw_reads,        self.minor_rvr_reads,
+            self.uncertain_frw_reads, self.uncertain_rvr_reads,
+            self.unpaired_frw_reads,
+            self.unpaired_rvr_reads,
         )
 
         for outfpath, reads in zip(outfpaths, read_collections):

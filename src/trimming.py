@@ -1,9 +1,8 @@
 
 class TrimmingRule:
 
-    def __init__(self, start_primer, end_primer, orientation):
+    def __init__(self, start_primer, orientation):
         self.start_primer = start_primer
-        self.end_primer = end_primer
         self.orientation = orientation
     # end def
 # end class
@@ -12,15 +11,25 @@ class TrimmingRule:
 class NanoporeTrimmingRule(TrimmingRule):
 
     def __init__(self, start_primer, end_primer, orientation):
-        super().__init__(start_primer, end_primer, orientation)
+        super().__init__(start_primer, orientation)
+        self.end_primer = end_primer
     # end def
 # end class
 
 
 class IlluminaPETrimmingRule(TrimmingRule):
 
-    def __init__(self, start_primer, end_primer, orientation, crop_end):
-        super().__init__(start_primer, end_primer, orientation)
+    def __init__(self, start_primer, orientation, read_end_trimming_rule):
+        super().__init__(start_primer, orientation)
+        self.read_end_trimming_rule = read_end_trimming_rule
+    # end def
+# end class
+
+
+class ReadEndTrimmingRulePE:
+
+    def __init__(self, end_primer, crop_end):
+        self.end_primer = end_primer
         self.crop_end = crop_end
     # end def
 # end class
@@ -128,6 +137,39 @@ class NanoporeTrimmer(Trimmer):
             alignment = self.trim_end_primer(alignment, end_primer)
         else:
             alignment = self.crop_end(alignment)
+        # end if
+
+        return alignment
+    # end def
+# end class
+
+
+class IlluminaPETrimmer(Trimmer):
+
+    def __init__(self, kromsatel_args, primer_scheme):
+        super().__init__(kromsatel_args, primer_scheme)
+    # end def
+
+    def trim_aligment(self, alignment, trimming_rule):
+
+        start_primer = trimming_rule.start_primer
+
+        if not start_primer is None:
+            alignment = self.trim_start_primer(alignment, start_primer)
+        else:
+            alignment = self.crop_start(alignment)
+        # end if
+
+        end_primer = trimming_rule.read_end_trimming_rule.end_primer
+
+        # For Illumina, we do not necessarily need to crop end if end primer is not found --
+        #   only if classification mark is UNCERTAIN
+        if not end_primer is None:
+            alignment = self.trim_end_primer(alignment, end_primer)
+        else:
+            if trimming_rule.read_end_trimming_rule.crop_end:
+                alignment = self.crop_end(alignment)
+            # end if
         # end if
 
         return alignment

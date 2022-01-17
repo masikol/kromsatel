@@ -18,8 +18,8 @@ class KromsatelArgs:
 
     def _init_default_arguments(self):
         # Input data
-        self.forward_read_fpath = None
-        self.reverse_read_fpath = None
+        self.frw_read_fpath = None
+        self.rvr_read_fpath = None
         self.unpaired_read_fpath = None
         self.primers_fpath = None
         self.reference_fpath = None
@@ -49,7 +49,7 @@ class KromsatelArgs:
     def __repr__(self):
         repr_str = """KromsatelArgs:
         paired_mode = {},
-        forward_read_fpath = `{}`, reverse_read_fpath = `{}`,
+        frw_read_fpath = `{}`, rvr_read_fpath = `{}`,
         unpaired_read_fpath = `{}`,
         primers_fpath = `{}`,
         reference_fpath = `{}`,
@@ -63,8 +63,8 @@ class KromsatelArgs:
         use_index = {}
         """.format(
             self.paired_mode,
-            self.forward_read_fpath,
-            self.reverse_read_fpath,
+            self.frw_read_fpath,
+            self.rvr_read_fpath,
             self.unpaired_read_fpath,
             self.primers_fpath,
             self.reference_fpath,
@@ -109,8 +109,8 @@ class KromsatelArgs:
     def _set_reads_fpaths(self):
         self.paired_mode = not self.argparse_args.reads_R1 is None
         if self.paired_mode:
-            self.forward_read_fpath = self.argparse_args.reads_R1
-            self.reverse_read_fpath = self.argparse_args.reads_R2
+            self.frw_read_fpath = self.argparse_args.reads_R1
+            self.rvr_read_fpath = self.argparse_args.reads_R2
         else:
             self.unpaired_read_fpath = self.argparse_args.reads_unpaired
         # end if
@@ -520,16 +520,16 @@ def enumerate_file_paths_to_stderr(file_paths):
 
 def create_read_pass_string(argparse_args):
 
-    forward_reads_passed  = not argparse_args.reads_R1       is None
-    reverse_reads_passed  = not argparse_args.reads_R2       is None
+    frw_reads_passed  = not argparse_args.reads_R1       is None
+    rvr_reads_passed  = not argparse_args.reads_R2       is None
     unpaired_reads_passed = not argparse_args.reads_unpaired is None
 
-    forward_char  = 'F' if forward_reads_passed  else 'f'
-    reverse_char  = 'R' if reverse_reads_passed  else 'r'
+    frw_char  = 'F' if frw_reads_passed  else 'f'
+    rvr_char  = 'R' if rvr_reads_passed  else 'r'
     unpaired_char = 'U' if unpaired_reads_passed else 'u'
 
     read_pass_string = '{}{}{}'.format(
-        forward_char, reverse_char, unpaired_char
+        frw_char, rvr_char, unpaired_char
     )
 
     return read_pass_string
