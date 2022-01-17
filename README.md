@@ -106,7 +106,7 @@ Advanced:
     -2 20_S30_L001_R2_001.fastq.gz \
     -p primers/nCov-2019_primers.csv \
     -r reference/Wuhan-Hu-1-compele-genome.fasta \
-    -o 20_s30_outdir
+    -o 20_S30_outdir
 ```
 
 #### Single-end reads
@@ -115,7 +115,7 @@ Advanced:
     -u Wuhan-Hu-1.fastq.gz \
     -p primers/nCov-2019_primers.csv \
     -r reference/Wuhan-Hu-1-compele-genome.fasta \
-    -o 20_s30_outdir
+    -o Wuhan-Hu-1_outdir
 ```
 
 #### With all possible options
@@ -125,7 +125,7 @@ Advanced:
     -2 20_S30_L001_R2_001.fastq.gz \
     -p primers/nCov-2019_primers.csv \
     -r reference/Wuhan-Hu-1-compele-genome.fasta \
-    -o 20_s30_outdir \
+    -o 20_S30_outdir \
     -k dc-megablast \
     -c 2000 \
     -m 50 \

@@ -1,31 +1,39 @@
 
+import os
 import sys
+from itertools import dropwhile, takewhile
+
 
 def print_help(version, last_update_data):
     print('kromsatel')
     print('Version {}. {} edition.'.format(version, last_update_data))
-    print("\nUsage:")
-    print('  ./kromsatel.py <YOUR_READS> -d <DATABASE_WITH_FRAGMENTS>')
-    print('\nOptions:')
-    print('  -h (--help) -- print help message and exit.')
-    print('  -v (--version) -- print version and exit.')
-    print("""  -o (--outdir) -- output directory.
-    Default value is `./kromsatel_output`""")
-    print("""  -d (--db) -- path to BLAST database of amplicons.
-    Mandatory option (it sounds like an oxymoron but anyway).""")
-    print("""  -p (--primers-to-rm) -- CSV file containing primers and their names.
-    It must be specified if you intend to remove primer sequences from reads.
-    See section "Removing primer sequences" for details.""")
-    print("""  -t (--threads) -- number of threads to launch.
-    Default: 1 thread.""")
-    print("""  --am -- minimum length of alignment against major amplicon.
-    Shorter alignments will not be considered.
-    Default: 100 bp.""")
-    print("""  --im -- minimum length of alignment against minor amplicon.
-    Shorter alignments will not be considered.
-    Default: 25 bp.""")
-    print("""  -c (--chunk-size) -- number of reads to blast within a single query.
-    Default: 1000 reads.""")
-    print('\nExample:')
-    print('  ./kromsatel.py corona_reads.fastq -d fragments-db/nCoV-2019_ref-fragments.fasta')
+
+    readme_fpath = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)),
+        'README.md'
+    )
+
+    with open(readme_fpath, 'rt') as readme_file:
+        readle_lines = readme_file.readlines()
+    # end with
+
+    lines_after_usage = dropwhile(
+        lambda line: line != '## Usage\n',
+        readle_lines
+    )
+
+    lines_of_usage = takewhile(
+        lambda line: line != '#### With all possible options\n',
+        lines_after_usage
+    )
+
+    lines_to_rm = {'```\n',}
+
+    lines_of_usage = filter(
+        lambda line: not line in lines_to_rm,
+        lines_of_usage
+    )
+
+    print()
+    sys.stdout.write(''.join(lines_of_usage))
 # end def print_help
