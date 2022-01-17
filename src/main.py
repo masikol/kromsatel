@@ -8,8 +8,7 @@ import src.reads_cleaning as rcl
 import src.parse_args
 from src.printing import getwt, print_err
 from src.platform import platformwise_exit
-
-from src.fatal_errors import FatalError
+from src.fatal_errors import FatalError, InvalidFastqError
 
 
 def main():
@@ -77,6 +76,8 @@ def _configure_output(kromsatel_args):
 
 def _clean_reads(kromsatel_args):
 
+    result_status = 1
+
     try:
         if kromsatel_args.paired_mode:
             reads_cleaner = rcl.IlluminaPEReadsCleaner(kromsatel_args)
@@ -85,9 +86,16 @@ def _clean_reads(kromsatel_args):
         # end if
         reads_cleaner.clean_reads()
 
+    except InvalidFastqError as err:
+        print_err(err.msg_to_print)
+        msg_to_log = '{}\n{}\n'.format(
+            err.msg_to_print,
+            err.msg_to_log_only
+        )
+        fs.log_to_file(msg_to_log, kromsatel_args.outdir_path)
+
     except FatalError as err:
         print_err(str(err))
-        result_status = 1
 
     else:
         result_status = 0

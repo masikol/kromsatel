@@ -86,6 +86,18 @@ def create_dir(dirpath):
 # end def
 
 
+def log_to_file(message, outdir_path):
+    log_fpath = os.path.join(
+        outdir_path, 'error_log.log'
+    )
+    print_err('Logging to file `{}`'.format(log_fpath))
+
+    with open(log_fpath, 'wt') as log_file:
+        log_file.write(message)
+    # end with
+# end def
+
+
 def rm_file_warn_on_error(file_path):
     try:
         os.unlink(file_path)

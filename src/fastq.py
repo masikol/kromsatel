@@ -2,6 +2,8 @@
 import os
 
 import src.filesystem as fs
+from src.fatal_errors import InvalidFastqError
+from src.sequences import verify_sequence, get_non_iupac_chars
 
 
 SPACE_HOLDER = '__<SPACE>__'
@@ -56,7 +58,20 @@ def form_chunk(fastq_file, chunk_size):
         # end if
 
         formatted_header = header[1:].replace(' ', SPACE_HOLDER)
-        seq         = fastq_file.readline().strip().upper()
+
+        seq_line = fastq_file.readline().strip()
+        seq = seq_line.upper()
+        if not verify_sequence(seq):
+            non_iupac_chars = get_non_iupac_chars(seq_line)
+            msg_to_print = '\nError: a non-IUPAC character encountered' \
+                ' in a sequence line of file `{}`\n' \
+                'Bad characters are the following:\n  {}' \
+                    .format(fastq_file.name, non_iupac_chars)
+            msg_to_log_only = 'Bad sequence line is the following:\n{}' \
+                .format(seq_line)
+            raise InvalidFastqError(msg_to_print, msg_to_log_only)
+        # end if
+
         comment     = fastq_file.readline().strip()
         quality_str = fastq_file.readline().strip()
 

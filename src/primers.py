@@ -1,38 +1,10 @@
 
 import src.fasta
+import src.sequences
+from src.printing import getwt
 from src.alignment import Alignment
-from src.orientation import Orientation
-from src.printing import print_err, getwt
 from src.fatal_errors import FatalError
-
-
-_COMPLEMENT_DICT = {
-    'A': 'T',
-    'T': 'A',
-    'G': 'C',
-    'C': 'G',
-    'R': 'Y',
-    'Y': 'R',
-    'W': 'W',
-    'S': 'S',
-    'K': 'M',
-    'M': 'K',
-    'H': 'D',
-    'V': 'B',
-    'B': 'V',
-    'D': 'H',
-    'N': 'N',
-}
-
-
-def _reverse_complement(seq):
-    return ''.join(map(_complement_base, seq))[::-1]
-# end def
-
-
-def _complement_base(base):
-    return _COMPLEMENT_DICT[base]
-# end def
+from src.orientation import Orientation
 
 
 class PrimerScheme:
@@ -132,7 +104,7 @@ class PrimerScheme:
                     find_start_pos = left_start
 
                     right_start, right_end = self._find_primer_anneal_coords(
-                        _reverse_complement(right_primer_seq),
+                        src.sequences.reverse_complement(right_primer_seq),
                         reference_seq,
                         Orientation.RIGHT,
                         beg=find_start_pos
@@ -174,7 +146,6 @@ class PrimerScheme:
     # end def
 
     def _parse_primer_from_csv_line(self, primer_line, sep=','):
-        # TODO: add sequence verification
         line_vals = primer_line.strip().split(sep)
 
         required_num_vals = 2
@@ -186,7 +157,14 @@ class PrimerScheme:
             raise ValueError(error_msg)
         # end if
 
-        primer_seq  = line_vals[1]
+        primer_seq  = line_vals[1].upper()
+
+        if not src.sequences.verify_sequence(primer_seq):
+            error_msg = '\nError: a non-IUPAC character encountered' \
+                        ' in the following primer sequence:\n' \
+                        '  {}'.format(primer_seq)
+            raise ValueError(error_msg)
+        # end if
 
         return primer_seq
     # end def

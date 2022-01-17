@@ -1,9 +1,7 @@
 
-import re
-
 import src.filesystem as fs
-from src.printing import print_err
 from src.fatal_errors import FatalError
+from src.sequences import verify_sequence, get_non_iupac_chars
 
 
 def read_fasta_sequence(file_path):
@@ -17,10 +15,12 @@ def read_fasta_sequence(file_path):
 
         while not (_is_header(line) or line == ''):
             line_counter += 1
-            if not _is_seq(line):
-                error_msg = '\nError: a non-iupac character found' \
-                            ' in line #{} of file `{}`' \
-                                .format(line_counter, file_path)
+            if not verify_sequence(line):
+                non_iupac_chars = get_non_iupac_chars(line)
+                error_msg = '\nError: a non-IUPAC character found' \
+                            ' in line #{} of file `{}`.\n' \
+                            'Bad characters are the following:\n  {}' \
+                                .format(line_counter, file_path, ', '.join(non_iupac_chars))
                 raise FatalError(error_msg)
             # end if
             sequence += line
@@ -34,11 +34,4 @@ def read_fasta_sequence(file_path):
 
 def _is_header(string):
     return string.startswith('>')
-# end def
-
-
-def _is_seq(string):
-    non_sequence_pattern = r'[^ATGCRYWSKMHVBDN]'
-    is_valid_sequence = re.search(non_sequence_pattern, string) is None
-    return is_valid_sequence
 # end def
