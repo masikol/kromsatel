@@ -1,17 +1,20 @@
 #!/usr/bin/env python3
 
-__version__ = '1.7.b_dev'
+__version__ = '1.7.c_dev'
 #                       YYYY-mm-dd
-__last_update_date__ = '2021-12-30'
+__last_update_date__ = '2022-01-17'
 # __author__ = 'Maxim Sikolenko'
 
-# |===== Check python interpreter version. =====|
+
+# Check python interpreter version
 
 import sys
 
 if sys.version_info.major < 3:
-    print( '\nYour python interpreter version is ' + '%d.%d' % (sys.version_info.major,
-        sys.version_info.minor) )
+    print(
+        '\nYour python interpreter version is ' + '%d.%d' \
+            % (sys.version_info.major, sys.version_info.minor)
+    )
     print('   Please, use Python 3.\a')
     # In python 2 'raw_input' does the same thing as 'input' in python 3.
     # Neither does 'input' in python2.
@@ -38,6 +41,7 @@ if '-h' in sys.argv[1:] or '--help' in sys.argv[1:] or '-help' in sys.argv[1:]:
     platformwise_exit(0)
 # end if
 
+
 import os
 
 print('\n  == {} v{} ==\n'.format(os.path.basename(__file__), __version__))
@@ -46,7 +50,7 @@ print('\n  == {} v{} ==\n'.format(os.path.basename(__file__), __version__))
 from src.main import main
 
 if __name__ == '__main__':
-    main()
+    result_status = main()
+    platformwise_exit(result_status)
 # end if
 
-platformwise_exit(0)

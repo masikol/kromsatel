@@ -3,8 +3,9 @@ import re
 import os
 import gzip
 import shutil
+from time import strftime, gmtime
 
-from src.printing import print_err
+from src.printing import print_err, START_TIME
 from src.fatal_errors import FatalError
 
 
@@ -93,6 +94,9 @@ def log_to_file(message, outdir_path):
     print_err('Logging to file `{}`'.format(log_fpath))
 
     with open(log_fpath, 'wt') as log_file:
+        log_file.write('kromsatel start time: {}\n' \
+            .format(strftime('%Y-%m-%d %H:%M:%S', gmtime(START_TIME)))
+        )
         log_file.write(message)
     # end with
 # end def

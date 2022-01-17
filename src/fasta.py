@@ -18,9 +18,9 @@ def read_fasta_sequence(file_path):
             if not verify_sequence(line):
                 non_iupac_chars = get_non_iupac_chars(line)
                 error_msg = '\nError: a non-IUPAC character found' \
-                            ' in line #{} of file `{}`.\n' \
-                            'Bad characters are the following:\n  {}' \
-                                .format(line_counter, file_path, ', '.join(non_iupac_chars))
+                    ' in line #{} of file `{}`.\n' \
+                    'Bad characters are the following:\n  {}' \
+                        .format(line_counter, file_path, ', '.join(non_iupac_chars))
                 raise FatalError(error_msg)
             # end if
             sequence += line

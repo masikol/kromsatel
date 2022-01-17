@@ -47,36 +47,21 @@ class KromsatelArgs:
     # end def
 
     def __repr__(self):
-        repr_str = """KromsatelArgs:
-        paired_mode = {},
-        frw_read_fpath = `{}`, rvr_read_fpath = `{}`,
-        unpaired_read_fpath = `{}`,
-        primers_fpath = `{}`,
-        reference_fpath = `{}`,
-        outdir_path = `{}`,
-        min_len = {},
-        threads_num = {},
-        chunk_size = {},
-        blast_task = {},
-        fixed_crop_len = {},
-        primer_ext_len = {},
-        use_index = {}
-        """.format(
-            self.paired_mode,
-            self.frw_read_fpath,
-            self.rvr_read_fpath,
-            self.unpaired_read_fpath,
-            self.primers_fpath,
-            self.reference_fpath,
-            self.outdir_path,
-            self.min_len,
-            self.threads_num,
-            self.chunk_size,
-            self.blast_task,
-            self.fixed_crop_len,
-            self.primer_ext_len,
-            self.use_index
-        )
+        repr_str = 'KromsatelArgs:\n' \
+        + 'paired_mode = {}\n'          .format(self.paired_mode) \
+        + 'frw_read_fpath = `{}`\n'     .format(self.frw_read_fpath) \
+        + 'rvr_read_fpath = `{}`\n'     .format(self.rvr_read_fpath) \
+        + 'unpaired_read_fpath = `{}`\n'.format(self.unpaired_read_fpath) \
+        + 'primers_fpath = `{}`\n'      .format(self.primers_fpath) \
+        + 'reference_fpath = `{}`\n'    .format(self.reference_fpath) \
+        + 'outdir_path = `{}`\n'        .format(self.outdir_path) \
+        + 'min_len = {}\n'              .format(self.min_len) \
+        + 'threads_num = {}\n'          .format(self.threads_num) \
+        + 'chunk_size = {}\n'           .format(self.chunk_size) \
+        + 'blast_task = {}\n'           .format(self.blast_task) \
+        + 'fixed_crop_len = {}\n'       .format(self.fixed_crop_len) \
+        + 'primer_ext_len = {}\n'       .format(self.primer_ext_len) \
+        + 'use_index = {}\n'            .format(self.use_index)
         return repr_str
     # end def
 
@@ -141,8 +126,8 @@ class KromsatelArgs:
             print_err('\nError: cannot create temporary directory `{}`' \
                 .format(self.tmp_dir_path))
             print_err(err)
-            print_err('The program will use the root of the output directory \n\
-    as a storage of temporary files')
+            print_err('The program will use the root of the output directory' \
+                ' as a storage of temporary files')
             self.tmp_dir_path = self.outdir_path
         # end try
     # end def
@@ -367,8 +352,8 @@ class KromsatelArgumentChecker:
         blast_task_argument = self.argparse_args.blast_task
         if not blast_task_argument in src.blast.BLAST_TASKS:
             error_msg = '\nError: invalid name of a blast task: `{}`.' \
-                        'Allowed values: {}' \
-                            .format(blast_task_argument, ', '.join(src.blast.BLAST_TASKS))
+                'Allowed values: {}' \
+                .format(blast_task_argument, ', '.join(src.blast.BLAST_TASKS))
             raise FatalError(error_msg)
         # end if
     # end def
@@ -384,8 +369,8 @@ class KromsatelArgumentChecker:
                 _check_int_string_ge0(crop_len_string)
             except _AtoiGreaterOrEqualToZeroError as err:
                 error_msg = '\nError: invalid crop length: `{}`\n  {}' \
-                            '  Also, it may be `auto`.' \
-                                .format(crop_len_string, err)
+                    '  Also, it may be `auto`.' \
+                    .format(crop_len_string, err)
                 raise FatalError(error_msg)
             # end try
         # end if

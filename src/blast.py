@@ -48,9 +48,9 @@ def check_program(program):
     # end for
     if not utility_found:
         error_msg = '\nError: program `{}` from BLAST+ toolkit is not installed.' \
-                    'If this error still occures although you have installed everything' \
-                    '  -- make sure that this program is added to PATH)' \
-                        .format(program)
+            'If this error still occures although you have installed everything' \
+            '  -- make sure that this program is added to PATH)' \
+                .format(program)
         raise FatalError(error_msg)
     # end if
 # end def check_blastn
@@ -114,8 +114,8 @@ def _make_blast_db(reference_fpath, db_fpath):
 
     if pipe.returncode != 0:
         error_msg = '\nError: Cannot create blast database' \
-                    '{}\n Command: `{}`' \
-                        .format(stdout_stderr[1].decode('utf-8'), makeblastdb_cmd)
+            '{}\n Command: `{}`' \
+                .format(stdout_stderr[1].decode('utf-8'), makeblastdb_cmd)
         raise FatalError(error_msg)
     # end if
 # end def
@@ -129,8 +129,8 @@ def _index_database(db_fpath):
 
     if pipe.returncode != 0:
         error_msg = '\nError: Cannot index the blast database `{}`' \
-                    '{}\n Command: `{}`' \
-                        .format(db_fpath, stdout_stderr[1].decode('utf-8'), makembindex_cmd)
+            '{}\n Command: `{}`' \
+                .format(db_fpath, stdout_stderr[1].decode('utf-8'), makembindex_cmd)
         raise FatalError(error_msg)
     # end if
 # end def
@@ -231,7 +231,7 @@ def blast_align(reads_chunk, kromsatel_args):
 
     if pipe.returncode != 0:
         error_msg = '\nError: an error occured while performing BLAST search:' \
-                    '{}'.format(stdout_stderr[1].decode('utf-8'))
+            '{}'.format(stdout_stderr[1].decode('utf-8'))
         raise FatalError(error_msg)
     # end if
 

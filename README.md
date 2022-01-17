@@ -1,6 +1,6 @@
 # kromsatel
 
-Current version is `1.7.b_dev` (2021-XX-XX edition).
+Current version is `1.7.c_dev` (2022-01-17 edition).
 
 ## Description (TODO: the description needs to be updated)
 

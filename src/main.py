@@ -2,10 +2,9 @@
 import os
 
 import src.blast
-import src.output as out
+import src.parse_args
 import src.filesystem as fs
 import src.reads_cleaning as rcl
-import src.parse_args
 from src.printing import getwt, print_err
 from src.platform import platformwise_exit
 from src.fatal_errors import FatalError, InvalidFastqError
@@ -17,7 +16,7 @@ def main():
 
     _check_blastplus_dependencies(args)
 
-    db_fpath = src.blast.create_reference_database(args)
+    db_fpath = _create_database(args)
     args.set_database_path(db_fpath)
 
     print('{} - Start.'.format(getwt()))
@@ -30,8 +29,10 @@ def main():
         print('\n{} - Completed.'.format(getwt()))
         print('  Output directory: `{}`'.format(args.outdir_path))
     else:
-        print_err('\n{} - Completed with errors.'.format(getwt()))
+        print_err('\n\a{} - Completed with errors.'.format(getwt()))
     # end if
+
+    return result_status
 # end def
 
 
@@ -57,6 +58,18 @@ def _check_blastplus_dependencies(kromsatel_args):
         print_err(str(err))
         platformwise_exit(1)
     # end try
+# end def
+
+
+def _create_database(kromsatel_args):
+    try:
+        db_fpath = src.blast.create_reference_database(kromsatel_args)
+    except FatalError as err:
+        print_err(str(err))
+        platformwise_exit(1)
+    # end try
+
+    return db_fpath
 # end def
 
 

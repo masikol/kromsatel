@@ -71,10 +71,10 @@ class PrimerScheme:
         n_lines_is_even = n_lines % 2 == 0
         if not n_lines_is_even:
             error_msg = '\nError: Cannot parse primers from file `{}`.\n' \
-                        'There are {} lines in this file.\n' \
-                        'There must be even number of lines ' \
-                        '(and therefore even number of primers), though.' \
-                            .format(self.primers_fpath, self.primers_fpath)
+                'There are {} lines in this file.\n' \
+                'There must be even number of lines ' \
+                '(and therefore even number of primers), though.' \
+                    .format(self.primers_fpath, self.primers_fpath)
             raise FatalError(error_msg)
         # end if
 
@@ -86,7 +86,6 @@ class PrimerScheme:
         with open(self.primers_fpath, 'rt') as primers_file:
             for _ in range(n_lines // 2):
                 try:
-
                     left_primer_seq, right_primer_seq = self._parse_primer_pair(primers_file, sep)
 
                     self.max_primer_len = max(
@@ -151,9 +150,9 @@ class PrimerScheme:
         required_num_vals = 2
         if len(line_vals) < required_num_vals:
             error_msg = '\nError: not enough comma-separated columns.\n' \
-                        '{} column(s) found, {} are required.\n' \
-                        'The line: `{}`' \
-                            .format(len(line_vals), required_num_vals, primer_line.strip())
+                '{} column(s) found, {} are required.\n' \
+                'The line: `{}`' \
+                    .format(len(line_vals), required_num_vals, primer_line.strip())
             raise ValueError(error_msg)
         # end if
 
@@ -161,8 +160,8 @@ class PrimerScheme:
 
         if not src.sequences.verify_sequence(primer_seq):
             error_msg = '\nError: a non-IUPAC character encountered' \
-                        ' in the following primer sequence:\n' \
-                        '  {}'.format(primer_seq)
+                ' in the following primer sequence:\n' \
+                '  {}'.format(primer_seq)
             raise ValueError(error_msg)
         # end if
 
@@ -175,7 +174,10 @@ class PrimerScheme:
         start = reference_seq.find(primer_seq, beg)
 
         if start == -1:
-            raise ValueError('Cannot find primer `{}` in the reference sequence'.format(primer_seq))
+            raise ValueError(
+                'Cannot find primer `{}` in the reference sequence' \
+                    .format(primer_seq)
+            )
         # end if
 
         end = start + len(primer_seq) - 1

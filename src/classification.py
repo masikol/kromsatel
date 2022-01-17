@@ -64,7 +64,10 @@ class NanoporeReadsClassifier(ReadsClassifier):
 
             for alignment in read_alignments:
 
-                alignment_overlaps = self._check_overlap(alignment, non_ovl_query_spans)
+                alignment_overlaps = self._check_overlap(
+                    alignment,
+                    non_ovl_query_spans
+                )
 
                 if alignment_overlaps:
                     continue
@@ -120,10 +123,14 @@ class NanoporeReadsClassifier(ReadsClassifier):
         classification_mark = self.UNCERTAIN
 
         if start_primer_found:
-            if self._alignment_is_major(read_end_coord, start_primer_num, read_orientation):
+            if self._alignment_is_major(read_end_coord,
+                                        start_primer_num,
+                                        read_orientation):
                 classification_mark = self.MAJOR
                 end_primer_num = start_primer_num
-            elif self._alignment_is_minor(read_end_coord, start_primer_num, read_orientation):
+            elif self._alignment_is_minor(read_end_coord,
+                                          start_primer_num,
+                                          read_orientation):
                 classification_mark = self.MINOR
                 end_primer_num = _get_minor_primer_num(start_primer_num, read_orientation)
             # end if
@@ -136,8 +143,11 @@ class NanoporeReadsClassifier(ReadsClassifier):
             )
         # end if
 
-        trimming_rule = \
-            self._make_trimming_rule(start_primer_num, end_primer_num, read_orientation)
+        trimming_rule = self._make_trimming_rule(
+            start_primer_num,
+            end_primer_num,
+            read_orientation
+        )
 
         return classification_mark, trimming_rule
     # end def
@@ -356,7 +366,11 @@ class IlluminaPEReadsClassifier(ReadsClassifier):
             read_orientation
         )
 
-        return IlluminaPETrimmingRule(start_primer, read_orientation, end_trimming_rule)
+        return IlluminaPETrimmingRule(
+            start_primer,
+            read_orientation,
+            end_trimming_rule
+        )
     # end def
 
     def _what_to_do_with_read_end(self,
