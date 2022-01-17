@@ -4,7 +4,7 @@ import os
 import src.blast
 import src.filesystem as fs
 from src.printing import print_err
-from src.platform import platf_depend_exit
+from src.fatal_errors import FatalError
 
 
 class KromsatelArgs:
@@ -137,7 +137,7 @@ class KromsatelArgs:
         )
         try:
             fs.create_dir(self.tmp_dir_path)
-        except OSError as err:
+        except FatalError as err:
             print_err('\nError: cannot create temporary directory `{}`' \
                 .format(self.tmp_dir_path))
             print_err(err)
@@ -205,27 +205,22 @@ class KromsatelArgumentChecker:
 
     def __init__(self, argparse_args):
         self.argparse_args = argparse_args
-
     # end def
 
     def check_arguments(self):
-        try:
-            self._check_mandatory_args()
+        self._check_mandatory_args()
 
-            self._check_reads_fpaths()
-            self._check_primers_fpath()
-            self._check_reference_fpath()
-            self._check_outdpath()
-            self._check_min_len()
-            self._check_threads_num()
-            self._check_chunk_size()
-            self._check_blast_task()
-            self._check_fixed_crop_len()
-            self._check_primer_ext_len()
-            self._check_use_index()
-        except ArgumentError:
-            platf_depend_exit(1)
-        # end try
+        self._check_reads_fpaths()
+        self._check_primers_fpath()
+        self._check_reference_fpath()
+        self._check_outdpath()
+        self._check_min_len()
+        self._check_threads_num()
+        self._check_chunk_size()
+        self._check_blast_task()
+        self._check_fixed_crop_len()
+        self._check_primer_ext_len()
+        self._check_use_index()
     # end def
 
     def _check_mandatory_args(self):
@@ -241,20 +236,25 @@ class KromsatelArgumentChecker:
 
         for arg, description in zip(mandatory_args, mandarory_args_descriptions):
             if arg is None:
-                print_err('\nError: argument {} is mandatory'.format(description))
-                raise ArgumentError
+                error_msg = '\nError: argument {} is mandatory'.format(description)
+                raise FatalError(error_msg)
             # end if
         # end for
     # end def
 
     def _check_reads_fpaths(self):
-        if not read_type_file_combnation_ok(self.argparse_args):
-            raise ArgumentError
-        # end if
+        try:
+            _check_file_type_combination(self.argparse_args)
+        except _InvalidFileCombinationError as err:
+            raise FatalError(str(err))
+        # end try
+
         paired_mode = not self.argparse_args.reads_R1 is None
-        if not self._reads_files_exist(paired_mode):
-            raise ArgumentError
-        # end if
+        try:
+            self._reads_files_exist(paired_mode)
+        except FileNotFoundError as err:
+            raise FatalError(str(err))
+        # end try
     # end def
 
     def _reads_files_exist(self, paired_mode):
@@ -272,26 +272,36 @@ class KromsatelArgumentChecker:
             )
         # end if
 
+        non_extant_file_paths = list()
+
         for file_path in file_paths_to_check_existance:
             if not os.path.exists(file_path):
-                print('\nError: file `{}` does not exist'.format(file_path))
-                return False
+                non_extant_file_paths.append(file_path)
             # end if
         # end for
-        return True
+
+        if len(non_extant_file_paths) != 0:
+            error_msg = '\nError: following files do not exits:\n'
+            for i, file_path in enumerate(non_extant_file_paths):
+                error_msg += '  {}. `{}`\n'.format(i+1, file_path)
+            # end for
+            raise FileNotFoundError(error_msg)
+        # end if
     # end def
 
     def _check_primers_fpath(self):
         if not os.path.exists(self.argparse_args.primers):
-            print('\nError: file `{}` does not exist'.format(self.argparse_args.primers))
-            raise ArgumentError
+            error_msg = '\nError: file `{}` does not exist' \
+                .format(self.argparse_args.primers)
+            raise FatalError(error_msg)
         # end if
     # end def
 
     def _check_reference_fpath(self):
         if not os.path.exists(self.argparse_args.reference):
-            print('\nError: file `{}` does not exist'.format(self.argparse_args.reference))
-            raise ArgumentError
+            error_msg = '\nError: file `{}` does not exist' \
+                .format(self.argparse_args.reference)
+            raise FatalError(error_msg)
         # end if
     # end def
 
@@ -301,10 +311,10 @@ class KromsatelArgumentChecker:
         # end if
         try:
             fs.create_dir(self.argparse_args.outdir)
-        except OSError as err:
-            print_err('\nError: cannot create directory `{}`'.format(self.argparse_args.outdir))
-            print_err(str(err))
-            raise ArgumentError
+        except FatalErrors as err:
+            error_msg = '\nError: cannot create directory `{}`:\n {}' \
+                .format(self.argparse_args.outdir, err)
+            raise FatalError(error_msg)
         # end if
     # end def
 
@@ -314,11 +324,11 @@ class KromsatelArgumentChecker:
         # end if
         min_len_string = self.argparse_args.min_len
         try:
-            check_int_string_gt0(min_len_string)
-        except AtoiGreaterThanZeroError as err:
-            print_err('\nError: invalid minimum length: `{}`'.format(min_len_string))
-            print_err(str(err))
-            raise ArgumentError
+            _check_int_string_gt0(min_len_string)
+        except _AtoiGreaterThanZeroError as err:
+            error_msg = '\nError: invalid minimum length: `{}`:\n {}' \
+                .format(min_len_string, err)
+            raise FatalError(error_msg)
         # end try
     # end def
 
@@ -328,11 +338,11 @@ class KromsatelArgumentChecker:
         # end if
         threads_num_string = self.argparse_args.threads
         try:
-            check_int_string_gt0(threads_num_string)
-        except AtoiGreaterThanZeroError as err:
-            print_err('\nError: invalid number of threads: `{}`'.format(threads_num_string))
-            print_err(str(err))
-            raise ArgumentError
+            _check_int_string_gt0(threads_num_string)
+        except _AtoiGreaterThanZeroError as err:
+            error_msg = '\nError: invalid number of threads: `{}`\n {}' \
+                .format(threads_num_string, err)
+            raise FatalError(error_msg)
         # end try
     # end def
 
@@ -342,11 +352,11 @@ class KromsatelArgumentChecker:
         # end if
         chunk_size_string = self.argparse_args.chunk_size
         try:
-            check_int_string_gt0(chunk_size_string)
-        except AtoiGreaterThanZeroError as err:
-            print_err('\nError: invalid chunk size: `{}`'.format(chunk_size_string))
-            print_err(str(err))
-            raise ArgumentError
+            _check_int_string_gt0(chunk_size_string)
+        except _AtoiGreaterThanZeroError as err:
+            error_msg = '\nError: invalid chunk size: `{}`\n {}' \
+                .format(chunk_size_string, err)
+            raise FatalError(error_msg)
         # end try
     # end def
 
@@ -356,9 +366,10 @@ class KromsatelArgumentChecker:
         # end if
         blast_task_argument = self.argparse_args.blast_task
         if not blast_task_argument in src.blast.BLAST_TASKS:
-            print_err('\nError: invalid name of a blast task: `{}`.'.format(blast_task_argument))
-            print_err('Allowed values: {}'.format(', '.join(src.blast.BLAST_TASKS)))
-            raise ArgumentError
+            error_msg = '\nError: invalid name of a blast task: `{}`.' \
+                        'Allowed values: {}' \
+                            .format(blast_task_argument, ', '.join(src.blast.BLAST_TASKS))
+            raise FatalError(error_msg)
         # end if
     # end def
 
@@ -370,12 +381,12 @@ class KromsatelArgumentChecker:
         auto_detect_crop_len = (crop_len_string == 'auto')
         if not auto_detect_crop_len:
             try:
-                check_int_string_ge0(crop_len_string)
-            except AtoiGreaterOrEqualToZeroError as err:
-                print_err('\nError: invalid crop length: `{}`'.format(crop_len_string))
-                print_err(str(err))
-                print_err('Also, it may be `auto`.')
-                raise ArgumentError
+                _check_int_string_ge0(crop_len_string)
+            except _AtoiGreaterOrEqualToZeroError as err:
+                error_msg = '\nError: invalid crop length: `{}`\n  {}' \
+                            '  Also, it may be `auto`.' \
+                                .format(crop_len_string, err)
+                raise FatalError(error_msg)
             # end try
         # end if
     # end def
@@ -386,12 +397,11 @@ class KromsatelArgumentChecker:
         # end if
         primer_ext_string = self.argparse_args.primer_5ext
         try:
-            check_int_string_ge0(primer_ext_string)
-        except AtoiGreaterOrEqualToZeroError as err:
-            print_err('\nError: invalid size of primer coordinates extention: `{}`' \
-                .format(primer_ext_string))
-            print_err(str(err))
-            raise ArgumentError
+            _check_int_string_ge0(primer_ext_string)
+        except _AtoiGreaterOrEqualToZeroError as err:
+            error_msg = '\nError: invalid size of primer coordinates extention: `{}`\n  {}' \
+                .format(primer_ext_string, err)
+            raise FatalError(error_msg)
         # end try
     # end def
 
@@ -404,10 +414,10 @@ class KromsatelArgumentChecker:
         use_index_string = self.argparse_args.use_index
 
         if not use_index_string in allowed_values:
-            print_err('\nError: invalid value of the `--use-index` option: `{}`' \
-                .format(use_index_string))
-            print_err('Allowed_values: {}'.format(', '.join(allowed_values)))
-            raise ArgumentError
+            error_msg = '\nError: invalid value of the `--use-index` option: `{}`' \
+                        'Allowed_values: {}' \
+                            .format(use_index_string, ', '.join(allowed_values))
+            raise FatalError(error_msg)
         # end if
 
         blast_task = self.argparse_args.blast_task
@@ -415,60 +425,60 @@ class KromsatelArgumentChecker:
         blast_task_cant_use_index = use_index_string == 'true' \
                                     and not blast_task in src.blast.TASKS_SUPPORT_INDEXED_SEARCH
         if blast_task_cant_use_index:
-            print_err('\nError: BLAST task {} cannot use indexed search'.format(blast_task))
-            raise ArgumentError
+            error_msg = '\nError: BLAST task {} cannot use indexed search' \
+                .format(blast_task)
+            raise FatalError(error_msg)
         # end if
     # end def
 # end class
 
 
-class ArgumentError(Exception):
+class _AtoiGreaterThanZeroError(Exception):
     pass
 # end class
 
 
-class AtoiGreaterThanZeroError(Exception):
+class _AtoiGreaterOrEqualToZeroError(Exception):
     pass
 # end class
 
 
-class AtoiGreaterOrEqualToZeroError(Exception):
+class _InvalidFileCombinationError(Exception):
     pass
 # end class
 
 
-def check_int_string_gt0(string_value):
+def _check_int_string_gt0(string_value):
     try:
         int_value = int(string_value)
         if int_value < 1:
             raise ValueError
         # end if
     except ValueError:
-        raise AtoiGreaterThanZeroError('This value must be integer > 0')
+        raise _AtoiGreaterThanZeroError('This value must be integer > 0')
     # end try
 # end def
 
 
-def check_int_string_ge0(string_value):
+def _check_int_string_ge0(string_value):
     try:
         int_value = int(string_value)
         if int_value < 0:
             raise ValueError
         # end if
     except ValueError:
-        raise AtoiGreaterThanZeroError('This value must be integer >= 0')
+        raise _AtoiGreaterThanZeroError('This value must be integer >= 0')
     # end try
 # end def
 
 
-def read_type_file_combnation_ok(argparse_args):
+def _check_file_type_combination(argparse_args):
 
-    read_pass_string = create_read_pass_string(argparse_args)
+    read_pass_string = _create_read_pass_string(argparse_args)
 
     no_input_data = (read_pass_string == 'fru')
     if no_input_data:
-        print_err('\nError: no input data.')
-        return False
+        raise _InvalidFileCombinationError('\nError: no input data.')
     # end if
 
     not_enough_data_strings = (
@@ -476,14 +486,11 @@ def read_type_file_combnation_ok(argparse_args):
         'fRu',
     )
     if read_pass_string in not_enough_data_strings:
-        print_err('\nError: not enough input data.')
-        print_err('Files of forward reads passed:')
-        enumerate_file_paths_to_stderr(argparse_args.reads_R1[0])
-        print_err('---')
-        print_err('Files of reverse reads passed:')
-        enumerate_file_paths_to_stderr(argparse_args.reads_R2[0])
-        print_err('---')
-        return False
+        error_msg = _make_not_enough_data_error_msg(
+            argparse_args.reads_R1,
+            argparse_args.reads_R2
+        )
+        raise _InvalidFileCombinationError(error_msg)
     # end if
 
     mixed_data_strings = (
@@ -493,43 +500,48 @@ def read_type_file_combnation_ok(argparse_args):
     )
 
     if read_pass_string in mixed_data_strings:
-        print_err('\nError: kromsatel cannot process "mixed" input data, \n\
-    i.e. when both paired (R1/R2) and unpaired read files are passed to it.')
-        print_err('Files of forward reads passed:')
-        enumerate_file_paths_to_stderr(argparse_args.reads_R1[0])
-        print_err('---')
-        print_err('Files of reverse reads passed:')
-        enumerate_file_paths_to_stderr(argparse_args.reads_R2[0])
-        print_err('---')
-        print_err('Files of unpaired reads passed:')
-        enumerate_file_paths_to_stderr(argparse_args.reads_unpaired[0])
-        print_err('---')
-        return False
+        error_msg = _make_mixed_data_error_msg(
+            argparse_args.reads_R1,
+            argparse_args.reads_R2,
+            argparse_args.reads_unpaired
+        )
+        raise _InvalidFileCombinationError(error_msg)
     # end if
-
-    return True
 # end def
 
 
-def enumerate_file_paths_to_stderr(file_paths):
-    for i, fpath in enumerate(file_paths):
-        print_err('  {}. `{}`'.format(i+1, fpath))
-    # end for
+def _make_not_enough_data_error_msg(frw_fpath, rvr_fpath):
+    error_msg = '\nError: not enough input data.\n' \
+                'File of forward reads passed:\n  `{}`\n' \
+                'File of reverse reads passed:\n  `{}`\n' \
+                    .format(frw_fpath, rvr_fpath)
+    return error_msg
 # end def
 
 
-def create_read_pass_string(argparse_args):
+def _make_mixed_data_error_msg(frw_fpath, rvr_fpath, unpaired_fpath):
+    error_msg = '\nError: the program cannot process "mixed" input data,\n' \
+                '  i.e. when both paired (R1/R2) and unpaired read files are passed to it.\n' \
+                'File of forward reads passed:\n  `{}`\n' \
+                'File of reverse reads passed:\n  `{}`\n' \
+                'File of unpaired reads passed:\n  `{}`\n' \
+                    .format(frw_fpath, rvr_fpath, unpaired_fpath)
+    return error_msg
+# end def
 
-    frw_reads_passed  = not argparse_args.reads_R1       is None
-    rvr_reads_passed  = not argparse_args.reads_R2       is None
-    unpaired_reads_passed = not argparse_args.reads_unpaired is None
 
-    frw_char  = 'F' if frw_reads_passed  else 'f'
-    rvr_char  = 'R' if rvr_reads_passed  else 'r'
-    unpaired_char = 'U' if unpaired_reads_passed else 'u'
+def _create_read_pass_string(argparse_args):
+
+    frw_reads_passed = not argparse_args.reads_R1       is None
+    rvr_reads_passed = not argparse_args.reads_R2       is None
+    upr_reads_passed = not argparse_args.reads_unpaired is None
+
+    frw_char = 'F' if frw_reads_passed else 'f'
+    rvr_char = 'R' if rvr_reads_passed else 'r'
+    upr_char = 'U' if upr_reads_passed else 'u'
 
     read_pass_string = '{}{}{}'.format(
-        frw_char, rvr_char, unpaired_char
+        frw_char, rvr_char, upr_char
     )
 
     return read_pass_string

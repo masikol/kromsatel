@@ -2,7 +2,7 @@
 import sys
 
 
-def platf_depend_exit(exit_code):
+def platformwise_exit(exit_code):
     if sys.platform.startswith('win'):
         input('Press ENTER to exit:')
     # end if

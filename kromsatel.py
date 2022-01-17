@@ -22,12 +22,12 @@ if sys.version_info.major < 3:
 # end if
 
 
-from src.platform import platf_depend_exit
+from src.platform import platformwise_exit
 
 # Firstly check if ve just need to print version or help message
 if '-v' in sys.argv[1:] or '--version' in sys.argv[1:] or '-version' in sys.argv[1:]:
     print(__version__)
-    platf_depend_exit(0)
+    platformwise_exit(0)
 # end if
 
 
@@ -35,7 +35,7 @@ import src.print_help
 
 if '-h' in sys.argv[1:] or '--help' in sys.argv[1:] or '-help' in sys.argv[1:]:
     src.print_help.print_help(__version__, __last_update_date__)
-    platf_depend_exit(0)
+    platformwise_exit(0)
 # end if
 
 import os
@@ -49,4 +49,4 @@ if __name__ == '__main__':
     main()
 # end if
 
-platf_depend_exit(0)
+platformwise_exit(0)

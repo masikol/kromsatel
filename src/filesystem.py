@@ -5,7 +5,7 @@ import gzip
 import shutil
 
 from src.printing import print_err
-from src.platform import platf_depend_exit
+from src.fatal_errors import FatalError
 
 
 def open_file_may_by_gzipped(fpath, mode='rt'):
@@ -28,27 +28,17 @@ def is_gzipped(fpath):
                 pass
             # end with
         except gzip.BadGzipFile as err:
-            print_err('\nError: bad gzip file: {}'.format(err))
-            platf_depend_exit(1)
+            error_msg = '\nError: bad gzip file: {}'.format(err)
+            raise FatalError(error_msg)
         except OSError as err:
-            print_err('\nError: cannot open file: {}'.format(err))
-            platf_depend_exit(1)
+            error_msg = '\nError: cannot open file: {}'.format(err)
+            raise FatalError(error_msg)
         # end try
     else:
         return False
     # end if
 
     return True
-# end def
-
-
-def rm_file_warn_on_error(file_path):
-    try:
-        os.unlink(file_path)
-    except OSError as oserr:
-        print_err('\nWarning: Cannot remove file `{}`'.format(file_path))
-        print_err( str(oserr) )
-    # end try
 # end def
 
 
@@ -76,17 +66,33 @@ def init_file(fpath):
             pass
         # end with
     except OSError as err:
-        print_err('\nError: cannot initialize output file `{}`'.format(fpath))
-        print_err(str(err))
-        platf_depend_exit(1)
+        error_msg = '\nError: cannot initialize output file `{}`:\n {}' \
+            .format(fpath, err)
+        raise FatalError(error_msg)
     # end try
 # end def
 
 
 def create_dir(dirpath):
     if not os.path.exists(dirpath):
-        os.makedirs(dirpath)
+        try:
+            os.makedirs(dirpath)
+        except OSError as err:
+            error_msg = '\nError: cannot create directory `{}`' \
+                .format(dirpath)
+            raise FatalError(error_msg)
+        # end try
     # end if
+# end def
+
+
+def rm_file_warn_on_error(file_path):
+    try:
+        os.unlink(file_path)
+    except OSError as oserr:
+        print_err('\nWarning: Cannot remove file `{}`'.format(file_path))
+        print_err( str(oserr) )
+    # end try
 # end def
 
 

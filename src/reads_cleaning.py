@@ -6,7 +6,7 @@ from src.printing import getwt
 from src.progress import Progress
 import src.synchronization as synchron
 from src.binning import UnpairedBinner, PairedBinner
-from src.alignment import parse_alignments_illumina, parse_alignments_nanopore
+from src.alignment import parse_alignments_nanopore, parse_alignments_illumina
 from src.classification import NanoporeReadsClassifier, IlluminaPEReadsClassifier
 
 
@@ -17,7 +17,6 @@ class ReadsCleaner:
         self.threads_num = kromsatel_args.threads_num
     # end def
 
-    # TODO: remove exits from Cleaners -- use exceptions mafaka
     def clean_reads(self):
         raise NotImplementedError
     # end def

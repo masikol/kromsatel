@@ -3,7 +3,7 @@ import src.fasta
 from src.alignment import Alignment
 from src.orientation import Orientation
 from src.printing import print_err, getwt
-from src.platform import platf_depend_exit
+from src.fatal_errors import FatalError
 
 
 _COMPLEMENT_DICT = {
@@ -98,11 +98,12 @@ class PrimerScheme:
         n_lines = sum(1 for _ in open(self.primers_fpath, 'rt'))
         n_lines_is_even = n_lines % 2 == 0
         if not n_lines_is_even:
-            print_err('Cannot parse primers: from file `{}`.'.format(self.primers_fpath))
-            print_err('There are {} lines in this file.'.format(n_lines))
-            print_err('There must be even number of lines \
-    (and therefore even number of primers), though.')
-            platf_depend_exit(1)
+            error_msg = '\nError: Cannot parse primers from file `{}`.\n' \
+                        'There are {} lines in this file.\n' \
+                        'There must be even number of lines ' \
+                        '(and therefore even number of primers), though.' \
+                            .format(self.primers_fpath, self.primers_fpath)
+            raise FatalError(error_msg)
         # end if
 
         print('{} - Parsing primers...'.format(getwt()))
@@ -144,9 +145,9 @@ class PrimerScheme:
                         )
                     )
                 except ValueError as err:
-                    print_err('Error: cannot parse a line in file `{}`.'.format(self.primers_fpath))
-                    print_err(str(err))
-                    platf_depend_exit(1)
+                    error_msg = '\nError: cannot parse a line in file `{}`.\n{}' \
+                        .format(self.primers_fpath, err)
+                    raise FatalError(error_msg)
                 # end try
             # end for
         # end with
@@ -173,15 +174,16 @@ class PrimerScheme:
     # end def
 
     def _parse_primer_from_csv_line(self, primer_line, sep=','):
+        # TODO: add sequence verification
         line_vals = primer_line.strip().split(sep)
 
         required_num_vals = 2
-        if len(line_vals) != required_num_vals:
-            raise ValueError(
-                """Not enough comma-separated columns.
-    {} column(s) found, {} are required'.
-    The line: `{}`""".format(len(line_vals), required_num_vals, primer_line)
-            )
+        if len(line_vals) < required_num_vals:
+            error_msg = '\nError: not enough comma-separated columns.\n' \
+                        '{} column(s) found, {} are required.\n' \
+                        'The line: `{}`' \
+                            .format(len(line_vals), required_num_vals, primer_line.strip())
+            raise ValueError(error_msg)
         # end if
 
         primer_seq  = line_vals[1]

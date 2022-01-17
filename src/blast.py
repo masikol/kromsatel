@@ -5,8 +5,8 @@ import subprocess as sp
 
 import src.fastq
 import src.filesystem as fs
-from src.printing import print_err, getwt
-from src.platform import platf_depend_exit
+from src.printing import getwt
+from src.fatal_errors import FatalError
 
 
 BLAST_TASKS = (
@@ -47,10 +47,11 @@ def check_program(program):
         # end if
     # end for
     if not utility_found:
-        print('  Attention!\n`{}` from BLAST+ toolkit is not installed.'.format(program))
-        print("""If this error still occures although you have installed everything
- -- make sure that this program is added to PATH)""")
-        platf_depend_exit(1)
+        error_msg = '\nError: program `{}` from BLAST+ toolkit is not installed.' \
+                    'If this error still occures although you have installed everything' \
+                    '  -- make sure that this program is added to PATH)' \
+                        .format(program)
+        raise FatalError(error_msg)
     # end if
 # end def check_blastn
 
@@ -96,7 +97,7 @@ def create_reference_database(kromsatel_args):
     if kromsatel_args.use_index:
         print('{} - Indexing the database...'.format(getwt()))
         _index_database(db_fpath)
-        print('{} - Indexing: done'.format(getwt()))
+        print('{} - Index: created'.format(getwt()))
     else:
         print('Index will not be created for the database.')
     # end if
@@ -112,10 +113,10 @@ def _make_blast_db(reference_fpath, db_fpath):
     stdout_stderr = pipe.communicate()
 
     if pipe.returncode != 0:
-        print_err('\nCannot create blast database')
-        print_err(stdout_stderr[1].decode('utf-8'))
-        print_err(' Command: `{}`'.format(makeblastdb_cmd))
-        platf_depend_exit(1)
+        error_msg = '\nError: Cannot create blast database' \
+                    '{}\n Command: `{}`' \
+                        .format(stdout_stderr[1].decode('utf-8'), makeblastdb_cmd)
+        raise FatalError(error_msg)
     # end if
 # end def
 
@@ -127,10 +128,10 @@ def _index_database(db_fpath):
     stdout_stderr = pipe.communicate()
 
     if pipe.returncode != 0:
-        print_err('\nCannot index the blast database `{}`'.format(db_fpath))
-        print_err(stdout_stderr[1].decode('utf-8'))
-        print_err(' Command: `{}`'.format(makembindex_cmd))
-        platf_depend_exit(1)
+        error_msg = '\nError: Cannot index the blast database `{}`' \
+                    '{}\n Command: `{}`' \
+                        .format(db_fpath, stdout_stderr[1].decode('utf-8'), makembindex_cmd)
+        raise FatalError(error_msg)
     # end if
 # end def
 
@@ -229,9 +230,9 @@ def blast_align(reads_chunk, kromsatel_args):
     stdout_stderr = pipe.communicate()
 
     if pipe.returncode != 0:
-        print_err('\nError while aligning a sequence against the database')
-        print_err(stdout_stderr[1].decode('utf-8'))
-        platf_depend_exit(1)
+        error_msg = '\nError: an error occured while performing BLAST search:' \
+                    '{}'.format(stdout_stderr[1].decode('utf-8'))
+        raise FatalError(error_msg)
     # end if
 
     fs.rm_file_warn_on_error(query_fpath)
