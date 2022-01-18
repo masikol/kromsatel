@@ -2,19 +2,24 @@
 
 Current version is `1.7.c_dev` (2022-01-17 edition).
 
-## Description (TODO: the description needs to be updated)
+Kromsatel is a program which preprocesses raw reads of amplicon sequencing.
 
-Kromsatel is a script for preprocessing raw reads obtained using [ARTIC's protocol](https://artic.network/ncov-2019) for sequencing SARS-CoV-2 genome. Here, "preprocessing" stands for splitting chimeric reads into consistent fragments according to primer scheme described in the [protocol](https://artic.network/ncov-2019) (or according to your own primer scheme).
+For example, when the genome of SARS-CoV-2 is sequenced, reads of amplicons produced using [ARTIC](https://artic.network/ncov-2019) protocol can be processed with kromsatel prior to downstream genome analysis. Any other amplicon protocol is (most likely) also acceptable; however, only ARTIC was tested.
 
-Brief description of the algorithm:
+## Description
 
-1. Align given read against amplicons using `blastn` program from BLAST+ toolkit (discontiguous megablast is used).
+Kromsatel can process Illumina (paired-end) and Nanopore read sets.
 
-2. Extract alignments, which do not overlap within the read and are long enough (see section "Options" about this "long enough").
+### Preprocessing: specifics
 
-3. Split the read into these aligned non-overlapping fragments (major amplicons are preferred).
+For kromsatel, the "preprocessing" stands for the following:
 
-### Dependencies
+1) remove primer sequences from reads;
+2) trim reads so that any unaligned part of read is removed;
+3) discriminate reads coming from major, minor, and non-specific amplicons (see the picture below, TODO);
+4) split chimeric reads into consistent fragments (only Nanopore reads);
+
+## Dependencies
 
 1. **Python 3** (https://www.python.org/). The script is tested on Python interpreter version 3.8.5.
 
@@ -38,7 +43,7 @@ Brief description of the algorithm:
 Mandatory arguments are marked with `*`.
 
 ```
-  -h (--help) -- print help message and exit.
+  -h (--help) -- print the help message and exit.
 
   -v (--version) -- print version and exit.
 
@@ -136,19 +141,72 @@ Advanced:
 
 ## Output files
 
-TODO
+#### Illumina (paired-end) reads
 
-### Read names (TODO: update this section)
+Let input read files be `20_S30_L001_R1_001.fastq.gz` and `20_S30_L001_R2_001.fastq.gz`. For them, kromsatel will produce the following output files:
 
-In output file, reads are named in following way:
+Pair of files of reads coming from major amplicons:
+```
+20_S30_L001_R1_001_major.fastq.gz
+20_S30_L001_R2_001_major.fastq.gz
+```
+
+Pair of files of reads coming from minor amplicons:
+```
+20_S30_L001_R1_001_minor.fastq.gz
+20_S30_L001_R2_001_minor.fastq.gz
+```
+
+Pair of files of reads coming from non-specific or undetected ampicons:
+```
+20_S30_L001_R1_001_uncertain.fastq.gz
+20_S30_L001_R2_001_uncertain.fastq.gz
+```
+
+Pair of files of reads which lost their pair during preprocessing:
+```
+20_S30_L001_R1_001_unpaired.fastq.gz
+20_S30_L001_R2_001_unpaired.fastq.gz
+```
+#### Nanopore reads
+
+Let input read file be `all_pass_15.fastq.gz`. For them, kromsatel will produce the following output files:
+
+File if reads coming from major amplicons:
 
 ```
-  @<original_read_name>_<QSTART>-<QEND>
+all_pass_15_major.fastq.gz
 ```
 
-QSTART and QEND are 1-based coordinates of, correspondingly, start and end of an aligned fragment, which yields the output read (see [Description](#Description) section above for details).
+File if reads coming from minor amplicons:
 
-Example of read name in an output file:
 ```
-  @98786bd2-88a6-43ca-8c69-704992ad69cb_28-98
+all_pass_15_minor.fastq.gz
+```
+
+File if of reads coming from non-specific or undetected ampicons:
+
+```
+all_pass_15_uncertain.fastq.gz
+```
+
+### Read names
+
+#### Illumina (paired-end) reads
+
+Kromsatel kepps read headers unchanged.
+
+#### Nanopore reads
+
+For Nanopore data, kromsatel modifies headers of output reads. Thus, the header of an output read will looklike this:
+
+```
+  @<ORIGINAL_READ_NAME>_<QSTART>-<QEND> [runid,sampleid,etc...]
+```
+
+, where QSTART and QEND are 1-based coordinates of, correspondingly, start and end of the aligned fragment, which yields the output read.
+
+An example of a modified read name in an output file:
+```
+  @98786bd2-88a6-43ca-8c69-704992ad69cb_28-98 runid=...,sampleid=...,etc...
 ```
