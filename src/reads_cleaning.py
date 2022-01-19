@@ -1,115 +1,206 @@
 
-import os
-import multiprocessing as mp
-
-import src.fastq
-import src.filesystem as fs
-from src.printing import getwt
-from src.progress import Progress
-import src.synchronization as synchron
-from src.binning import UnpairedBinner, PairedBinner
-from src.alignment import parse_alignments_nanopore, parse_alignments_illumina
-from src.classification import NanoporeReadsClassifier, \
-                               IlluminaPEReadsClassifier, \
-                               IlluminaSEReadsClassifier
+import src.primers as prm
+from src.orientation import Orientation
+from src.trimming import UnpairedTrimmer, UnpairedTrimmingRule
+from src.trimming import PairedTrimmer, PairedTrimmingRule
+from src.trimming import ReadEndTrimmingRulePE
+from src.orientation import get_read_orientation
 
 
 class ReadsCleaner:
 
+    MAJOR     = 0
+    MINOR     = 1
+    UNCERTAIN = 2
+
     def __init__(self, kromsatel_args):
-        self.kromsatel_args = kromsatel_args
-        self.threads_num = kromsatel_args.threads_num
+        self.primer_scheme = prm.PrimerScheme(kromsatel_args)
+        self.MIN_LEN = kromsatel_args.min_len
     # end def
 
-    def clean_reads(self):
+    def fill_binner(self, reads_chunk, alignments, binner):
         raise NotImplementedError
     # end def
 
-    def _write_output(self):
-        with synchron.output_lock:
-            self.binner.write_binned_reads()
-        # end with
+    def _search_primer_bruteforce(self, coord, orientation):
+        if orientation == Orientation.LEFT:
+            primer_num = \
+                self.primer_scheme.find_left_primer_by_coord(
+                    coord
+                )
+        else:
+            primer_num = \
+                self.primer_scheme.find_right_primer_by_coord(
+                    coord
+                )
+        # end if
+        return primer_num
     # end def
 
-    def _update_progress(self, increment):
-        with synchron.status_update_lock:
-            self.progress.increment_done(increment)
-            self.progress.increment_next_report()
-        # end with
+    def _check_read_long_enough(self, read):
+        return (len(read) > self.MIN_LEN)
     # end def
 
-    def _print_progress(self):
-        with synchron.print_lock:
-            self.progress.print_status_bar()
-        # end with
+    def _classify_read(self, alignment):
+
+        read_orientation = get_read_orientation(alignment)
+
+        read_start_coord = alignment.get_aln_start_coord()
+        read_end_coord   = alignment.get_aln_end_coord()
+
+        start_primer_num = self._search_primer_bruteforce(
+            read_start_coord,
+            read_orientation
+        )
+
+        start_primer_found = not (start_primer_num is None)
+
+        classification_mark = self.UNCERTAIN
+
+        if start_primer_found:
+            if self._alignment_is_major(read_end_coord,
+                                        start_primer_num,
+                                        read_orientation):
+                classification_mark = self.MAJOR
+                end_primer_num = start_primer_num
+            elif self._alignment_is_minor(read_end_coord,
+                                          start_primer_num,
+                                          read_orientation):
+                classification_mark = self.MINOR
+                end_primer_num = _get_minor_primer_num(start_primer_num, read_orientation)
+            # end if
+        # end if
+
+        if classification_mark == self.UNCERTAIN:
+            end_primer_num = self._search_primer_bruteforce(
+                read_end_coord,
+                Orientation.invert(read_orientation)
+            )
+        # end if
+
+        trimming_rule = self._make_trimming_rule(
+            start_primer_num,
+            end_primer_num,
+            read_orientation
+        )
+
+        return classification_mark, trimming_rule
+    # end def
+
+    def _alignment_is_major(self, read_end_coord, start_primer_num, read_orientation):
+
+        alignment_is_major = self.primer_scheme.check_coord_within_primer(
+            read_end_coord,
+            start_primer_num,
+            Orientation.invert(read_orientation)
+        )
+        return alignment_is_major
+    # end def
+
+    def _alignment_is_minor(self, read_end_coord, start_primer_num, read_orientation):
+        minor_pair_primer_num = _get_minor_primer_num(start_primer_num, read_orientation)
+        alignment_is_minor = self.primer_scheme.check_coord_within_primer(
+            read_end_coord,
+            minor_pair_primer_num,
+            Orientation.invert(read_orientation)
+        )
+        return alignment_is_minor
+    # end def
+
+    def _make_trimming_rule(self, start_primer_num, end_primer_num, read_orientation):
+        start_primer = self.primer_scheme.get_primer(
+            start_primer_num,
+            read_orientation
+        )
+        end_primer = self.primer_scheme.get_primer(
+            end_primer_num,
+            Orientation.invert(read_orientation)
+        )
+        return UnpairedTrimmingRule(start_primer, end_primer, read_orientation)
+    # end def
+
+    def _add_read_to_binner(self, read, classification_mark, binner):
+        if classification_mark == self.MAJOR:
+            binner.add_major_read(read)
+        elif classification_mark == self.MINOR:
+            binner.add_minor_read(read)
+        else:
+            binner.add_uncertain_read(read)
+        # end if
     # end def
 # end class
 
 
 class NanoporeReadsCleaner(ReadsCleaner):
 
-    # TODO: do not save reference to kromsatel args by creating some "BlastArguments" class
     def __init__(self, kromsatel_args):
         super().__init__(kromsatel_args)
-        self.classifier = NanoporeReadsClassifier(kromsatel_args)
-
-        self.reads_fpath = self.kromsatel_args.long_read_fpath
-        self.chunk_size = self.kromsatel_args.chunk_size
-
-        num_reads_total = \
-            _count_unpaired_reads_verbosely(self.reads_fpath)
-        self.progress = Progress(num_reads_total)
-
-        output_prefix = fs.rm_fastq_extention(
-            os.path.basename(self.reads_fpath)
-        )
-        self.binner = UnpairedBinner(self.kromsatel_args.outdir_path, output_prefix)
+        self.trimmer = UnpairedTrimmer(kromsatel_args, self.primer_scheme)
     # end def
 
+    def fill_binner(self, reads_chunk, alignments, binner):
 
-    def clean_reads(self):
+        for read in reads_chunk:
 
-        reads_chunks = src.fastq.fastq_chunks_unpaired(
-            fq_fpath=self.reads_fpath,
-            chunk_size=self.chunk_size
-        )
+            read_alignments = alignments[read.header]
 
-        self.progress.print_status_bar()
+            if len(read_alignments) == 0:
+                continue
+            # end if
 
-        self._clean_chunks(reads_chunks)
+            non_ovl_query_spans = list()
 
-        self.progress.print_status_bar()
-        print()
-    # end def
+            for alignment in read_alignments:
 
-    def _clean_chunks(self, reads_chunks):
-        with mp.Pool(self.threads_num) as pool:
-            task_iterator = pool.imap(
-                self._clean_nanopore_chunk,
-                reads_chunks,
-                chunksize=1
-            )
-            for task in task_iterator:
-                pass
+                alignment_overlaps = self._check_overlap(
+                    alignment,
+                    non_ovl_query_spans
+                )
+
+                if alignment_overlaps:
+                    continue
+                # end if
+                non_ovl_query_spans.append(
+                    (alignment.query_from, alignment.query_to,)
+                )
+
+                classification_mark, trimming_rule = \
+                    self._classify_read(alignment)
+
+                alignment = self.trimmer.trim_aligment(alignment, trimming_rule)
+
+                trimmed_read = \
+                    self.trimmer.trim_read_to_fit_alignment(read, alignment)
+
+                if self._check_read_long_enough(trimmed_read):
+                    trimmed_read = self._modify_read_name(trimmed_read, alignment)
+                    self._add_read_to_binner(trimmed_read, classification_mark, binner)
+                # end if
             # end for
-        # end with
-
-        pool.close()
-        pool.join()
+        # end for
     # end def
 
-    def _clean_nanopore_chunk(self, reads_chunk):
+    def _check_overlap(self, aligment, non_ovl_query_spans):
+        for span in non_ovl_query_spans:
+            span_from = span[0]
+            span_to   = span[1]
+            if span_from <= aligment.query_from <= span_to:
+                return True
+            # end if
+            if span_from <= aligment.query_to   <= span_to:
+                return True
+            # end if
+        # end for
+        return False
+    # end def
 
-        alignments = parse_alignments_nanopore(
-            src.blast.blast_align(reads_chunk, self.kromsatel_args)
-        )
+    def _modify_read_name(self, read, alignment):
+        identifier = read.get_seqid()
+        modified_identifier = \
+            '{}_{}-{}'.format(identifier, alignment.query_from, alignment.query_to)
 
-        self.classifier.fill_binner(reads_chunk, alignments, self.binner)
-
-        self._write_output()
-        increment = len(reads_chunk)
-        self._update_progress(increment)
-        self._print_progress()
+        read.header = read.header.replace(identifier, modified_identifier)
+        return read
     # end def
 # end class
 
@@ -118,74 +209,30 @@ class IlluminaSEReadsCleaner(ReadsCleaner):
 
     def __init__(self, kromsatel_args):
         super().__init__(kromsatel_args)
-        self.classifier = IlluminaSEReadsClassifier(kromsatel_args)
-
-        self.reads_fpath = self.kromsatel_args.frw_read_fpath
-        self.chunk_size = self.kromsatel_args.chunk_size
-
-        num_reads_total = \
-            _count_unpaired_reads_verbosely(self.reads_fpath)
-        self.progress = Progress(num_reads_total)
-
-        output_prefix = fs.rm_fastq_extention(
-            os.path.basename(self.reads_fpath)
-        )
-
-        self.binner = UnpairedBinner(
-            self.kromsatel_args.outdir_path,
-            output_prefix
-        )
+        self.trimmer = UnpairedTrimmer(kromsatel_args, self.primer_scheme)
     # end def
 
-    def clean_reads(self):
+    def fill_binner(self, reads_chunk, alignments, binner):
 
-        reads_chunks = src.fastq.fastq_chunks_unpaired(
-            fq_fpath=self.reads_fpath,
-            chunk_size=self.chunk_size
-        )
+        for read in reads_chunk:
 
-        self.progress.print_status_bar()
+            alignment = alignments[read.header]
+            if alignment is None:
+                continue
+            # end if
 
-        self._clean_chunks(reads_chunks)
+            classification_mark, trimming_rule = \
+                self._classify_read(alignment)
 
-        self.progress.print_status_bar()
-        print()
-    # end def
+            alignment = self.trimmer.trim_aligment(alignment, trimming_rule)
 
-    def _clean_chunks(self, reads_chunks):
-        with mp.Pool(self.threads_num) as pool:
-            task_iterator = pool.imap(
-                self._clean_illumina_se_chunk,
-                reads_chunks,
-                chunksize=1
-            )
-            for task in task_iterator:
-                pass
-            # end for
-        # end with
+            trimmed_read = \
+                self.trimmer.trim_read_to_fit_alignment(read, alignment)
 
-        pool.close()
-        pool.join()
-    # end def
-
-    def _clean_illumina_se_chunk(self, reads_chunk):
-
-        alignments = self._align_reads(reads_chunk)
-
-        self.classifier.fill_binner(reads_chunk, alignments, self.binner)
-
-        self._write_output()
-        increment = len(reads_chunk)
-        self._update_progress(increment)
-        self._print_progress()
-    # end def
-
-    def _align_reads(self, reads_chunk):
-        alignments = parse_alignments_illumina(
-            src.blast.blast_align(reads_chunk, self.kromsatel_args)
-        )
-
-        return alignments
+            if self._check_read_long_enough(trimmed_read):
+                self._add_read_to_binner(trimmed_read, classification_mark, binner)
+            # end if
+        # end for
     # end def
 # end class
 
@@ -194,99 +241,236 @@ class IlluminaPEReadsCleaner(ReadsCleaner):
 
     def __init__(self, kromsatel_args):
         super().__init__(kromsatel_args)
-        self.classifier = IlluminaPEReadsClassifier(kromsatel_args)
-
-        self.frw_read_fpath = self.kromsatel_args.frw_read_fpath
-        self.rvr_read_fpath = self.kromsatel_args.rvr_read_fpath
-        self.chunk_size = self.kromsatel_args.chunk_size
-
-        num_reads_total = \
-            _count_paired_reads_verbosely(self.frw_read_fpath)
-        self.progress = Progress(num_reads_total)
-
-        output_prefix = fs.rm_fastq_extention(
-            os.path.basename(self.frw_read_fpath)
-        )
-
-        self.binner = PairedBinner(
-            self.kromsatel_args.outdir_path,
-            output_prefix
-        )
+        self.trimmer = PairedTrimmer(kromsatel_args, self.primer_scheme)
     # end def
 
-    def clean_reads(self):
+    def fill_binner(self, reads_chunk, alignments, binner):
 
-        reads_chunks = src.fastq.fastq_chunks_paired(
-            frw_read_fpath=self.frw_read_fpath,
-            rvr_read_fpath=self.rvr_read_fpath,
-            chunk_size=self.chunk_size
-        )
+        frw_alignments, rvr_alignments = alignments
 
-        self.progress.print_status_bar()
+        for frw_read, rvr_read in zip(*reads_chunk):
 
-        self._clean_chunks(reads_chunks)
+            frw_alignment = frw_alignments[frw_read.header]
+            rvr_alignment = rvr_alignments[rvr_read.header]
 
-        self.progress.print_status_bar()
-        print()
-    # end def
+            # TODO: process unpaired reads anyway
+            if frw_alignment is None or rvr_alignment is None:
+                continue
+            # end if
 
-    def _clean_chunks(self, reads_chunks):
-        with mp.Pool(self.threads_num) as pool:
-            task_iterator = pool.imap(
-                self._clean_illumina_pe_chunk,
-                reads_chunks,
-                chunksize=1
+            try:
+                classification_mark, trimming_rules = \
+                    self._classify_read_pair(frw_alignment, rvr_alignment)
+            except ImproperOrientationError:
+                continue
+            # end try
+
+            frw_alignment = \
+                self.trimmer.trim_aligment(frw_alignment, trimming_rules[0])
+            rvr_alignment = \
+                self.trimmer.trim_aligment(rvr_alignment, trimming_rules[1])
+
+            frw_trimmed_read = \
+                self.trimmer.trim_read_to_fit_alignment(frw_read, frw_alignment)
+            rvr_trimmed_read = \
+                self.trimmer.trim_read_to_fit_alignment(rvr_read, rvr_alignment)
+
+            self._add_read_pair_to_binner(
+                frw_trimmed_read,
+                rvr_trimmed_read,
+                classification_mark,
+                binner
             )
-            for task in task_iterator:
-                pass
-            # end for
-        # end with
-
-        pool.close()
-        pool.join()
+        # end for
     # end def
 
-    def _clean_illumina_pe_chunk(self, reads_chunk):
+    def _classify_read_pair(self, frw_alignment, rvr_alignment):
 
-        alignments = self._align_read_pairs(reads_chunk)
+        frw_orientation = get_read_orientation(frw_alignment)
+        rvr_orientation = get_read_orientation(rvr_alignment)
 
-        self.classifier.fill_binner(reads_chunk, alignments, self.binner)
+        improper_orientation = (frw_orientation == rvr_orientation)
+        if improper_orientation:
+            raise ImproperOrientationError
+        # end if
 
-        self._write_output()
-        increment = len(reads_chunk[0])
-        self._update_progress(increment)
-        self._print_progress()
+        frw_start_coord = frw_alignment.get_aln_start_coord()
+        rvr_start_coord = rvr_alignment.get_aln_start_coord()
+
+        frw_start_primer_num = self._search_primer_bruteforce(
+            frw_start_coord,
+            frw_orientation
+        )
+        frw_start_primer_found = not (frw_start_primer_num is None)
+
+        classification_mark = self.UNCERTAIN
+
+        if frw_start_primer_found:
+            if self._alignments_are_major(rvr_start_coord,
+                                          frw_start_primer_num,
+                                          rvr_orientation):
+                classification_mark = self.MAJOR
+                rvr_start_primer_num = frw_start_primer_num
+            elif self._alignments_are_minor(rvr_start_coord,
+                                            frw_start_primer_num,
+                                            frw_orientation,
+                                            rvr_orientation):
+                classification_mark = self.MINOR
+                rvr_start_primer_num = _get_minor_primer_num(
+                    frw_start_primer_num,
+                    frw_orientation
+                )
+            # end if
+        # end if
+
+        if classification_mark == self.UNCERTAIN:
+            rvr_start_primer_num = self._search_primer_bruteforce(
+                rvr_start_coord,
+                rvr_orientation
+            )
+        # end if
+
+        frw_trimming_rule = self._make_trimming_rule(
+            frw_alignment,
+            frw_start_primer_num,
+            frw_orientation,
+            rvr_start_primer_num
+        )
+        rvr_trimming_rule = self._make_trimming_rule(
+            rvr_alignment,
+            rvr_start_primer_num,
+            rvr_orientation,
+            frw_start_primer_num
+        )
+
+        trimming_rules = (frw_trimming_rule, rvr_trimming_rule)
+
+        return classification_mark, trimming_rules
     # end def
 
-    def _align_read_pairs(self, reads_chunk):
-        frw_chunk = reads_chunk[0]
-        frw_alignments = parse_alignments_illumina(
-            src.blast.blast_align(frw_chunk, self.kromsatel_args)
+    def _alignments_are_major(self,
+                              rvr_start_coord,
+                              frw_start_primer_num,
+                              rvr_orientation):
+        alignments_are_major = \
+            self.primer_scheme.check_coord_within_primer(
+                rvr_start_coord,
+                frw_start_primer_num,
+                rvr_orientation
+            )
+        return alignments_are_major
+    # end def
+
+    def _alignments_are_minor(self,
+                              rvr_start_coord,
+                              frw_start_primer_num,
+                              frw_orientation,
+                              rvr_orientation):
+
+        minor_pair_primer_num = _get_minor_primer_num(
+            frw_start_primer_num,
+            frw_orientation
         )
 
-        rvr_chunk = reads_chunk[1]
-        rvr_alignments = parse_alignments_illumina(
-            src.blast.blast_align(rvr_chunk, self.kromsatel_args)
+        alignments_are_minor = \
+            self.primer_scheme.check_coord_within_primer(
+                rvr_start_coord,
+                minor_pair_primer_num,
+                rvr_orientation
+            )
+        return alignments_are_minor
+    # end def
+
+    def _make_trimming_rule(self,
+                            alignment,
+                            start_primer_num,
+                            read_orientation,
+                            opposite_start_primer_num):
+
+        start_primer = self.primer_scheme.get_primer(
+            start_primer_num,
+            read_orientation
         )
 
-        alignments = (frw_alignments, rvr_alignments)
+        end_trimming_rule = self._what_to_do_with_read_end(
+            alignment,
+            opposite_start_primer_num,
+            read_orientation
+        )
 
-        return alignments
+        return PairedTrimmingRule(
+            start_primer,
+            read_orientation,
+            end_trimming_rule
+        )
+    # end def
+
+    def _what_to_do_with_read_end(self,
+                                  alignment,
+                                  opposite_start_primer_num,
+                                  orientation):
+
+        crop_end = True
+        opposite_orientation = Orientation.invert(orientation)
+
+        if not opposite_start_primer_num is None:
+            end_coord = alignment.get_aln_end_coord()
+            crop_end = not self.primer_scheme.check_coord_within_primer(
+                end_coord,
+                opposite_start_primer_num,
+                opposite_orientation
+            )
+        # end if
+
+        if not crop_end:
+            end_primer_num = opposite_start_primer_num
+            end_primer = self.primer_scheme.get_primer(
+                end_primer_num,
+                opposite_orientation
+            )
+        else:
+            end_primer = None
+        # end if
+
+        return ReadEndTrimmingRulePE(end_primer, crop_end)
+    # end def
+
+    def _add_read_pair_to_binner(self,
+                                 frw_read,
+                                 rvr_read,
+                                 classification_mark,
+                                 binner):
+
+        frw_long_enough = self._check_read_long_enough(frw_read)
+        rvr_long_enough = self._check_read_long_enough(rvr_read)
+
+        if frw_long_enough and rvr_long_enough:
+            if classification_mark == self.MAJOR:
+                binner.add_major_pair(frw_read, rvr_read)
+            elif classification_mark == self.MINOR:
+                binner.add_minor_pair(frw_read, rvr_read)
+            else:
+                binner.add_uncertain_pair(frw_read, rvr_read)
+            # end if
+        elif frw_long_enough and not rvr_long_enough:
+            binner.add_frw_unpaired_read(frw_read)
+        elif not frw_long_enough and rvr_long_enough:
+            binner.add_rvr_unpaired_read(rvr_read)
+        # end if
     # end def
 # end class
 
 
-def _count_unpaired_reads_verbosely(fastq_fpath):
-    print('{} - Counting reads...'.format(getwt()))
-    num_reads_total = src.fastq.count_reads(fastq_fpath)
-    print('{} - {} reads.'.format(getwt(), num_reads_total))
-    return num_reads_total
-# end def
+class ImproperOrientationError(Exception):
+    pass
+# end class
 
 
-def _count_paired_reads_verbosely(frw_fastq_fpath):
-    print('{} - Counting reads...'.format(getwt()))
-    num_reads_total = src.fastq.count_reads(frw_fastq_fpath)
-    print('{} - {} read pairs.'.format(getwt(), num_reads_total))
-    return num_reads_total
+def _get_minor_primer_num(primer_num, orientation):
+    if orientation == Orientation.LEFT:
+        minor_primer_num = primer_num - 1
+    else:
+        minor_primer_num = primer_num + 1
+    # end if
+    return minor_primer_num
 # end def
