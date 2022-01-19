@@ -7,6 +7,7 @@ import src.fastq
 import src.filesystem as fs
 from src.printing import getwt
 from src.fatal_errors import FatalError
+from src.kromsatel_modes import KromsatelModes
 
 
 BLAST_TASKS = (
@@ -14,6 +15,7 @@ BLAST_TASKS = (
     'dc-megablast',
     'blastn',
 )
+
 
 TASKS_SUPPORT_INDEXED_SEARCH = {
     BLAST_TASKS[0],
@@ -207,8 +209,8 @@ def blast_align(reads_chunk, kromsatel_args):
         'kromsatel_alignment_{}.json'.format(os.getpid())
     )
 
-    if kromsatel_args.paired_mode:
-        blast_cmd = _configure_blastn_cmd_illumina(
+    if kromsatel_args.kromsatel_mode == KromsatelModes.Nanopore:
+        blast_cmd = _configure_blastn_cmd_nanopore(
             query_fpath,
             kromsatel_args.db_fpath,
             kromsatel_args.blast_task,
@@ -216,7 +218,7 @@ def blast_align(reads_chunk, kromsatel_args):
             alignment_fpath
         )
     else:
-        blast_cmd = _configure_blastn_cmd_nanopore(
+        blast_cmd = _configure_blastn_cmd_illumina(
             query_fpath,
             kromsatel_args.db_fpath,
             kromsatel_args.blast_task,

@@ -5,6 +5,7 @@ import src.blast
 import src.filesystem as fs
 from src.printing import print_err
 from src.fatal_errors import FatalError
+from src.kromsatel_modes import KromsatelModes
 
 
 class KromsatelArgs:
@@ -42,13 +43,13 @@ class KromsatelArgs:
         self.use_index = False
 
         # "Meta" parameter derived from arguments
-        self.paired_mode = None
+        self.kromsatel_mode = None
         self.tmp_dir_path = None
     # end def
 
     def __repr__(self):
         repr_str = 'KromsatelArgs:\n' \
-        + 'paired_mode = {}\n'          .format(self.paired_mode) \
+        + 'kromsatel_mode = {}\n'       .format(self.kromsatel_mode) \
         + 'frw_read_fpath = `{}`\n'     .format(self.frw_read_fpath) \
         + 'rvr_read_fpath = `{}`\n'     .format(self.rvr_read_fpath) \
         + 'unpaired_read_fpath = `{}`\n'.format(self.unpaired_read_fpath) \
@@ -92,12 +93,14 @@ class KromsatelArgs:
     # end def
 
     def _set_reads_fpaths(self):
-        self.paired_mode = not self.argparse_args.reads_R1 is None
-        if self.paired_mode:
+        self.kromsatel_mode = _detect_kromsatel_mode(self.argparse_args)
+        if self.kromsatel_mode == KromsatelModes.IlluminaPE:
             self.frw_read_fpath = self.argparse_args.reads_R1
             self.rvr_read_fpath = self.argparse_args.reads_R2
-        else:
+        elif self.kromsatel_mode == KromsatelModes.Nanopore:
             self.unpaired_read_fpath = self.argparse_args.reads_unpaired
+        elif self.kromsatel_mode == KromsatelModes.IlluminaSE:
+            self.frw_read_fpath = self.argparse_args.reads_R1
         # end if
     # end def
 
@@ -234,26 +237,30 @@ class KromsatelArgumentChecker:
             raise FatalError(str(err))
         # end try
 
-        paired_mode = not self.argparse_args.reads_R1 is None
+        kromsatel_mode = _detect_kromsatel_mode(self.argparse_args)
         try:
-            self._reads_files_exist(paired_mode)
+            self._reads_files_exist(kromsatel_mode)
         except FileNotFoundError as err:
             raise FatalError(str(err))
         # end try
     # end def
 
-    def _reads_files_exist(self, paired_mode):
+    def _reads_files_exist(self, kromsatel_mode):
 
         file_paths_to_check_existance = None
 
-        if paired_mode:
+        if kromsatel_mode == KromsatelModes.IlluminaPE:
             file_paths_to_check_existance = (
                 self.argparse_args.reads_R1,
                 self.argparse_args.reads_R2,
             )
-        else:
+        elif kromsatel_mode == KromsatelModes.Nanopore:
             file_paths_to_check_existance = (
                 self.argparse_args.reads_unpaired,
+            )
+        elif kromsatel_mode == KromsatelModes.IlluminaSE:
+            file_paths_to_check_existance = (
+                self.argparse_args.reads_R1,
             )
         # end if
 
@@ -433,6 +440,25 @@ class _InvalidFileCombinationError(Exception):
 # end class
 
 
+def _detect_kromsatel_mode(argparse_args):
+    read_pass_string = _create_read_pass_string(argparse_args)
+
+    if read_pass_string == 'FRu':
+        return KromsatelModes.IlluminaPE
+    elif read_pass_string == 'frU':
+        return KromsatelModes.Nanopore
+    elif read_pass_string == 'Fru':
+        return KromsatelModes.IlluminaSE
+    # end if
+
+    # Execution should not reach here
+    error_msg = '\nInternal error. Please, contact the developer' \
+        ' and tell him abouth this error.\n' \
+        'Error description: "kromsatel mode error in _detect_kromsatel_mode".'
+    raise FatalError(error_msg)
+# end def
+
+
 def _check_int_string_gt0(string_value):
     try:
         int_value = int(string_value)
@@ -466,18 +492,6 @@ def _check_file_type_combination(argparse_args):
         raise _InvalidFileCombinationError('\nError: no input data.')
     # end if
 
-    not_enough_data_strings = (
-        'Fru',
-        'fRu',
-    )
-    if read_pass_string in not_enough_data_strings:
-        error_msg = _make_not_enough_data_error_msg(
-            argparse_args.reads_R1,
-            argparse_args.reads_R2
-        )
-        raise _InvalidFileCombinationError(error_msg)
-    # end if
-
     mixed_data_strings = (
         'fRU',
         'FrU',
@@ -492,15 +506,6 @@ def _check_file_type_combination(argparse_args):
         )
         raise _InvalidFileCombinationError(error_msg)
     # end if
-# end def
-
-
-def _make_not_enough_data_error_msg(frw_fpath, rvr_fpath):
-    error_msg = '\nError: not enough input data.\n' \
-                'File of forward reads passed:\n  `{}`\n' \
-                'File of reverse reads passed:\n  `{}`\n' \
-                    .format(frw_fpath, rvr_fpath)
-    return error_msg
 # end def
 
 

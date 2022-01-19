@@ -9,7 +9,9 @@ from src.progress import Progress
 import src.synchronization as synchron
 from src.binning import UnpairedBinner, PairedBinner
 from src.alignment import parse_alignments_nanopore, parse_alignments_illumina
-from src.classification import NanoporeReadsClassifier, IlluminaPEReadsClassifier
+from src.classification import NanoporeReadsClassifier, \
+                               IlluminaPEReadsClassifier, \
+                               IlluminaSEReadsClassifier
 
 
 class ReadsCleaner:
@@ -112,6 +114,82 @@ class NanoporeReadsCleaner(ReadsCleaner):
 # end class
 
 
+class IlluminaSEReadsCleaner(ReadsCleaner):
+
+    def __init__(self, kromsatel_args):
+        super().__init__(kromsatel_args)
+        self.classifier = IlluminaSEReadsClassifier(kromsatel_args)
+
+        self.reads_fpath = self.kromsatel_args.frw_read_fpath
+        self.chunk_size = self.kromsatel_args.chunk_size
+
+        num_reads_total = \
+            _count_unpaired_reads_verbosely(self.reads_fpath)
+        self.progress = Progress(num_reads_total)
+
+        output_prefix = fs.rm_fastq_extention(
+            os.path.basename(self.reads_fpath)
+        )
+
+        self.binner = UnpairedBinner(
+            self.kromsatel_args.outdir_path,
+            output_prefix
+        )
+    # end def
+
+    def clean_reads(self):
+
+        reads_chunks = src.fastq.fastq_chunks_unpaired(
+            fq_fpath=self.reads_fpath,
+            chunk_size=self.chunk_size
+        )
+
+        self.progress.print_status_bar()
+
+        self._clean_chunks(reads_chunks)
+
+        self.progress.print_status_bar()
+        print()
+    # end def
+
+    def _clean_chunks(self, reads_chunks):
+        with mp.Pool(self.threads_num) as pool:
+            task_iterator = pool.imap(
+                self._clean_illumina_se_chunk,
+                reads_chunks,
+                chunksize=1
+            )
+            for task in task_iterator:
+                pass
+            # end for
+        # end with
+
+        pool.close()
+        pool.join()
+    # end def
+
+    def _clean_illumina_se_chunk(self, reads_chunk):
+
+        alignments = self._align_reads(reads_chunk)
+
+        self.classifier.fill_binner(reads_chunk, alignments, self.binner)
+
+        self._write_output()
+        increment = len(reads_chunk)
+        self._update_progress(increment)
+        self._print_progress()
+    # end def
+
+    def _align_reads(self, reads_chunk):
+        alignments = parse_alignments_illumina(
+            src.blast.blast_align(reads_chunk, self.kromsatel_args)
+        )
+
+        return alignments
+    # end def
+# end class
+
+
 class IlluminaPEReadsCleaner(ReadsCleaner):
 
     def __init__(self, kromsatel_args):
@@ -127,10 +205,13 @@ class IlluminaPEReadsCleaner(ReadsCleaner):
         self.progress = Progress(num_reads_total)
 
         output_prefix = fs.rm_fastq_extention(
-            os.path.basename(kromsatel_args.frw_read_fpath)
+            os.path.basename(self.frw_read_fpath)
         )
 
-        self.binner = PairedBinner(self.kromsatel_args.outdir_path, output_prefix)
+        self.binner = PairedBinner(
+            self.kromsatel_args.outdir_path,
+            output_prefix
+        )
     # end def
 
     def clean_reads(self):

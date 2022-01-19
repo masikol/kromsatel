@@ -1,23 +1,26 @@
 # kromsatel
 
-Current version is `1.7.c_dev` (2022-01-17 edition).
+Current version is `1.7.d_dev` (2022-01-XX edition).
 
-Kromsatel is a program which preprocesses raw reads of amplicon sequencing.
+Kromsatel is a program which preprocesses ("cleans") raw reads of amplicon sequencing.
 
 For example, when the genome of SARS-CoV-2 is sequenced, reads of amplicons produced using [ARTIC](https://artic.network/ncov-2019) protocol can be processed with kromsatel prior to downstream genome analysis. Any other amplicon protocol is (most likely) also acceptable; however, only ARTIC was tested.
 
 ## Description
 
-Kromsatel can process Illumina (paired-end) and Nanopore read sets.
+Kromsatel can process Illumina (paired-end or single-end) and Nanopore read sets.
 
 ### Preprocessing: specifics
 
 For kromsatel, the "preprocessing" stands for the following:
 
-1) remove primer sequences from reads;
-2) trim reads so that any unaligned part of read is removed;
-3) discriminate reads coming from major, minor, and non-specific amplicons (see the picture below, TODO);
-4) split chimeric reads into consistent fragments (only Nanopore reads);
+1) Remove primer sequences from reads.
+
+2) Trim reads so that any unaligned part of read is removed.
+
+3) Discriminate reads coming from major, minor, and non-specific amplicons (see the picture below, TODO).
+
+4) Split chimeric reads into consistent fragments (only Nanopore reads).
 
 ## Dependencies
 
@@ -103,7 +106,7 @@ Advanced:
 
 ### Examples
 
-#### Paired-end reads
+#### Short (e.g. Illumina) paired-end reads
 
 ```
 ./kromsatel.py \
@@ -114,7 +117,16 @@ Advanced:
     -o 20_S30_outdir
 ```
 
-#### Single-end reads
+#### Short (e.g. Illumina) single-end reads
+```
+./kromsatel.py \
+    -1 20_S30_L001_R1_001.fastq.gz \
+    -p primers/nCov-2019_primers.csv \
+    -r reference/Wuhan-Hu-1-compele-genome.fasta \
+    -o 20_S30_outdir
+```
+
+#### Long (e.g. nanopore) reads
 ```
 ./kromsatel.py \
     -u Wuhan-Hu-1.fastq.gz \
@@ -123,7 +135,7 @@ Advanced:
     -o Wuhan-Hu-1_outdir
 ```
 
-#### With all possible options
+#### With additional options
 ```
 ./kromsatel.py \
     -1 20_S30_L001_R1_001.fastq.gz \
@@ -141,7 +153,7 @@ Advanced:
 
 ## Output files
 
-#### Illumina (paired-end) reads
+#### Paired-end reads
 
 Let input read files be `20_S30_L001_R1_001.fastq.gz` and `20_S30_L001_R2_001.fastq.gz`. For them, kromsatel will produce the following output files:
 
@@ -168,7 +180,7 @@ Pair of files of reads which lost their pair during preprocessing:
 20_S30_L001_R1_001_unpaired.fastq.gz
 20_S30_L001_R2_001_unpaired.fastq.gz
 ```
-#### Nanopore reads
+#### Single-end reads
 
 Let input read file be `all_pass_15.fastq.gz`. For them, kromsatel will produce the following output files:
 
@@ -194,7 +206,7 @@ all_pass_15_uncertain.fastq.gz
 
 #### Illumina (paired-end) reads
 
-Kromsatel kepps read headers unchanged.
+Kromsatel keeps read headers unchanged.
 
 #### Nanopore reads
 

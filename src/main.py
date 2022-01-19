@@ -7,6 +7,7 @@ import src.filesystem as fs
 import src.reads_cleaning as rcl
 from src.printing import getwt, print_err
 from src.platform import platformwise_exit
+from src.kromsatel_modes import KromsatelModes
 from src.fatal_errors import FatalError, InvalidFastqError
 
 
@@ -78,10 +79,12 @@ def _clean_reads(kromsatel_args):
     result_status = 1
 
     try:
-        if kromsatel_args.paired_mode:
+        if kromsatel_args.kromsatel_mode == KromsatelModes.IlluminaPE:
             reads_cleaner = rcl.IlluminaPEReadsCleaner(kromsatel_args)
-        else:
+        elif kromsatel_args.kromsatel_mode == KromsatelModes.Nanopore:
             reads_cleaner = rcl.NanoporeReadsCleaner(kromsatel_args)
+        elif kromsatel_args.kromsatel_mode == KromsatelModes.IlluminaSE:
+            reads_cleaner = rcl.IlluminaSEReadsCleaner(kromsatel_args)
         # end if
         reads_cleaner.clean_reads()
 

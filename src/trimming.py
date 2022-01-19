@@ -8,7 +8,7 @@ class TrimmingRule:
 # end class
 
 
-class NanoporeTrimmingRule(TrimmingRule):
+class UnpairedTrimmingRule(TrimmingRule):
 
     def __init__(self, start_primer, end_primer, orientation):
         super().__init__(start_primer, orientation)
@@ -17,7 +17,7 @@ class NanoporeTrimmingRule(TrimmingRule):
 # end class
 
 
-class IlluminaPETrimmingRule(TrimmingRule):
+class PairedTrimmingRule(TrimmingRule):
 
     def __init__(self, start_primer, orientation, read_end_trimming_rule):
         super().__init__(start_primer, orientation)
@@ -115,7 +115,7 @@ class Trimmer:
 # end class
 
 
-class NanoporeTrimmer(Trimmer):
+class UnpairedTrimmer(Trimmer):
 
     def __init__(self, kromsatel_args, primer_scheme):
         super().__init__(kromsatel_args, primer_scheme)
@@ -144,7 +144,7 @@ class NanoporeTrimmer(Trimmer):
 # end class
 
 
-class IlluminaPETrimmer(Trimmer):
+class PairedTrimmer(Trimmer):
 
     def __init__(self, kromsatel_args, primer_scheme):
         super().__init__(kromsatel_args, primer_scheme)
