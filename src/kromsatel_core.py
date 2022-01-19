@@ -7,7 +7,8 @@ import src.filesystem as fs
 from src.printing import getwt
 from src.progress import Progress
 import src.synchronization as synchron
-from src.binning import UnpairedBinner, PairedBinner
+from src.binning import SimpleUnpairedBinner, SimplePairedBinner, \
+                        SplitUnpairedBinner, SplitPairedBinner
 from src.alignment import parse_alignments_nanopore, parse_alignments_illumina
 from src.reads_cleaning import NanoporeReadsCleaner, \
                                IlluminaPEReadsCleaner, \
@@ -63,7 +64,20 @@ class LongReadKromsatelCore(KromsatelCore):
         output_prefix = fs.rm_fastq_extention(
             os.path.basename(self.reads_fpath)
         )
-        self.binner = UnpairedBinner(self.kromsatel_args.outdir_path, output_prefix)
+
+        if kromsatel_args.split_output:
+            self.binner = SplitUnpairedBinner(
+                self.kromsatel_args.outdir_path,
+                output_prefix,
+                self.kromsatel_args.min_len
+            )
+        else:
+            self.binner = SimpleUnpairedBinner(
+                self.kromsatel_args.outdir_path,
+                output_prefix,
+                self.kromsatel_args.min_len
+            )
+        # end if
     # end def
 
 
@@ -131,10 +145,19 @@ class IlluminaSEKromsatelCore(KromsatelCore):
             os.path.basename(self.reads_fpath)
         )
 
-        self.binner = UnpairedBinner(
-            self.kromsatel_args.outdir_path,
-            output_prefix
-        )
+        if kromsatel_args.split_output:
+            self.binner = SplitUnpairedBinner(
+                self.kromsatel_args.outdir_path,
+                output_prefix,
+                self.kromsatel_args.min_len
+            )
+        else:
+            self.binner = SimpleUnpairedBinner(
+                self.kromsatel_args.outdir_path,
+                output_prefix,
+                self.kromsatel_args.min_len
+            )
+        # end if
     # end def
 
     def run(self):
@@ -208,10 +231,19 @@ class IlluminaPEKromsatelCore(KromsatelCore):
             os.path.basename(self.frw_read_fpath)
         )
 
-        self.binner = PairedBinner(
-            self.kromsatel_args.outdir_path,
-            output_prefix
-        )
+        if kromsatel_args.split_output:
+            self.binner = SplitPairedBinner(
+                self.kromsatel_args.outdir_path,
+                output_prefix,
+                self.kromsatel_args.min_len
+            )
+        else:
+            self.binner = SimplePairedBinner(
+                self.kromsatel_args.outdir_path,
+                output_prefix,
+                self.kromsatel_args.min_len
+            )
+        # end if
     # end def
 
     def run(self):

@@ -1,0 +1,4 @@
+
+MAJOR     = 0
+MINOR     = 1
+UNCERTAIN = 2

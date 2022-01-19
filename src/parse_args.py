@@ -24,13 +24,13 @@ def _parse_command_line():
     #     action="store_true"
     # )
 
-    parser.add_argument(
-        '-v',
-        '--version',
-        help='TODO',
-        required=False,
-        action="store_true"
-    )
+    # parser.add_argument(
+    #     '-v',
+    #     '--version',
+    #     help='TODO',
+    #     required=False,
+    #     action="store_true"
+    # )
 
     parser.add_argument(
         '-1',
@@ -72,6 +72,14 @@ def _parse_command_line():
         '--outdir',
         help='TODO',
         required=False
+    )
+
+    parser.add_argument(
+        '-s',
+        '--split-output',
+        help='TODO',
+        required=False,
+        action='store_true'
     )
 
     parser.add_argument(

@@ -18,15 +18,23 @@ class FastqRecord:
         self.quality_str = quality_str
     # end def
 
-    def get_seqid(self):
-        return self.header.partition(SPACE_HOLDER)[0]
-    # end def
-
     def get_copy(self):
         return FastqRecord(
             self.header, self.seq,
             self.comment, self.quality_str
         )
+    # end def
+
+    def modify_header(self, alignment):
+        identifier = self._get_seqid()
+        modified_identifier = '{}_{}-{}' \
+            .format(identifier, alignment.query_from, alignment.query_to)
+
+        self.header = self.header.replace(identifier, modified_identifier)
+    # end def
+
+    def _get_seqid(self):
+        return self.header.partition(SPACE_HOLDER)[0]
     # end def
 
     def __len__(self):

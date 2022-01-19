@@ -30,12 +30,13 @@ class KromsatelArgs:
             os.getcwd(),
             'kromsatel_output'
         )
-        self.min_len = 25 # bp
+        self.split_output = False
 
         # Computational resourses
         self.threads_num = 1 # thread
 
         # Advanced
+        self.min_len = 25 # bp
         self.chunk_size = 1000 # reads
         self.blast_task = 'megablast'
         self.fixed_crop_len = 'auto'
@@ -56,6 +57,7 @@ class KromsatelArgs:
         + 'primers_fpath = `{}`\n'  .format(self.primers_fpath) \
         + 'reference_fpath = `{}`\n'.format(self.reference_fpath) \
         + 'outdir_path = `{}`\n'    .format(self.outdir_path) \
+        + 'split_output = `{}`\n'   .format(self.split_output) \
         + 'min_len = {}\n'          .format(self.min_len) \
         + 'threads_num = {}\n'      .format(self.threads_num) \
         + 'chunk_size = {}\n'       .format(self.chunk_size) \
@@ -84,6 +86,7 @@ class KromsatelArgs:
         self._set_primers_fpath()
         self._set_reference_fpath()
         self._set_outdpath()
+        self._set_split_output()
         self._set_min_len()
         self._set_threads_num()
         self._set_blast_task()
@@ -133,6 +136,10 @@ class KromsatelArgs:
                 ' as a storage of temporary files')
             self.tmp_dir_path = self.outdir_path
         # end try
+    # end def
+
+    def _set_split_output(self):
+         self.split_output = self.argparse_args.split_output
     # end def
 
     def _set_min_len(self):
