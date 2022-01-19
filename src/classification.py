@@ -40,7 +40,95 @@ class ReadsClassifier:
     def _check_read_long_enough(self, read):
         return (len(read) > self.MIN_LEN)
     # end def
-# enc class
+
+    def _classify_read(self, alignment):
+
+        read_orientation = get_read_orientation(alignment)
+
+        read_start_coord = alignment.get_aln_start_coord()
+        read_end_coord   = alignment.get_aln_end_coord()
+
+        start_primer_num = self._search_primer_bruteforce(
+            read_start_coord,
+            read_orientation
+        )
+
+        start_primer_found = not (start_primer_num is None)
+
+        classification_mark = self.UNCERTAIN
+
+        if start_primer_found:
+            if self._alignment_is_major(read_end_coord,
+                                        start_primer_num,
+                                        read_orientation):
+                classification_mark = self.MAJOR
+                end_primer_num = start_primer_num
+            elif self._alignment_is_minor(read_end_coord,
+                                          start_primer_num,
+                                          read_orientation):
+                classification_mark = self.MINOR
+                end_primer_num = _get_minor_primer_num(start_primer_num, read_orientation)
+            # end if
+        # end if
+
+        if classification_mark == self.UNCERTAIN:
+            end_primer_num = self._search_primer_bruteforce(
+                read_end_coord,
+                Orientation.invert(read_orientation)
+            )
+        # end if
+
+        trimming_rule = self._make_trimming_rule(
+            start_primer_num,
+            end_primer_num,
+            read_orientation
+        )
+
+        return classification_mark, trimming_rule
+    # end def
+
+    def _alignment_is_major(self, read_end_coord, start_primer_num, read_orientation):
+
+        alignment_is_major = self.primer_scheme.check_coord_within_primer(
+            read_end_coord,
+            start_primer_num,
+            Orientation.invert(read_orientation)
+        )
+        return alignment_is_major
+    # end def
+
+    def _alignment_is_minor(self, read_end_coord, start_primer_num, read_orientation):
+        minor_pair_primer_num = _get_minor_primer_num(start_primer_num, read_orientation)
+        alignment_is_minor = self.primer_scheme.check_coord_within_primer(
+            read_end_coord,
+            minor_pair_primer_num,
+            Orientation.invert(read_orientation)
+        )
+        return alignment_is_minor
+    # end def
+
+    def _make_trimming_rule(self, start_primer_num, end_primer_num, read_orientation):
+        start_primer = self.primer_scheme.get_primer(
+            start_primer_num,
+            read_orientation
+        )
+        end_primer = self.primer_scheme.get_primer(
+            end_primer_num,
+            Orientation.invert(read_orientation)
+        )
+        return UnpairedTrimmingRule(start_primer, end_primer, read_orientation)
+    # end def
+
+    def _add_read_to_binner(self, read, classification_mark, binner):
+        if classification_mark == self.MAJOR:
+            binner.add_major_read(read)
+        elif classification_mark == self.MINOR:
+            binner.add_minor_read(read)
+        else:
+            binner.add_uncertain_read(read)
+        # end if
+    # end def
+# end class
 
 
 class NanoporeReadsClassifier(ReadsClassifier):
@@ -106,84 +194,6 @@ class NanoporeReadsClassifier(ReadsClassifier):
         return False
     # end def
 
-    def _classify_read(self, alignment):
-
-        read_orientation = get_read_orientation(alignment)
-
-        read_start_coord = alignment.get_aln_start_coord()
-        read_end_coord   = alignment.get_aln_end_coord()
-
-        start_primer_num = self._search_primer_bruteforce(
-            read_start_coord,
-            read_orientation
-        )
-
-        start_primer_found = not (start_primer_num is None)
-
-        classification_mark = self.UNCERTAIN
-
-        if start_primer_found:
-            if self._alignment_is_major(read_end_coord,
-                                        start_primer_num,
-                                        read_orientation):
-                classification_mark = self.MAJOR
-                end_primer_num = start_primer_num
-            elif self._alignment_is_minor(read_end_coord,
-                                          start_primer_num,
-                                          read_orientation):
-                classification_mark = self.MINOR
-                end_primer_num = _get_minor_primer_num(start_primer_num, read_orientation)
-            # end if
-        # end if
-
-        if classification_mark == self.UNCERTAIN:
-            end_primer_num = self._search_primer_bruteforce(
-                read_end_coord,
-                Orientation.invert(read_orientation)
-            )
-        # end if
-
-        trimming_rule = self._make_trimming_rule(
-            start_primer_num,
-            end_primer_num,
-            read_orientation
-        )
-
-        return classification_mark, trimming_rule
-    # end def
-
-    def _alignment_is_major(self, read_end_coord, start_primer_num, read_orientation):
-
-        alignment_is_major = self.primer_scheme.check_coord_within_primer(
-            read_end_coord,
-            start_primer_num,
-            Orientation.invert(read_orientation)
-        )
-        return alignment_is_major
-    # end def
-
-    def _alignment_is_minor(self, read_end_coord, start_primer_num, read_orientation):
-        minor_pair_primer_num = _get_minor_primer_num(start_primer_num, read_orientation)
-        alignment_is_minor = self.primer_scheme.check_coord_within_primer(
-            read_end_coord,
-            minor_pair_primer_num,
-            Orientation.invert(read_orientation)
-        )
-        return alignment_is_minor
-    # end def
-
-    def _make_trimming_rule(self, start_primer_num, end_primer_num, read_orientation):
-        start_primer = self.primer_scheme.get_primer(
-            start_primer_num,
-            read_orientation
-        )
-        end_primer = self.primer_scheme.get_primer(
-            end_primer_num,
-            Orientation.invert(read_orientation)
-        )
-        return UnpairedTrimmingRule(start_primer, end_primer, read_orientation)
-    # end def
-
     def _modify_read_name(self, read, alignment):
         identifier = read.get_seqid()
         modified_identifier = \
@@ -191,16 +201,6 @@ class NanoporeReadsClassifier(ReadsClassifier):
 
         read.header = read.header.replace(identifier, modified_identifier)
         return read
-    # end def
-
-    def _add_read_to_binner(self, read, classification_mark, binner):
-        if classification_mark == self.MAJOR:
-            binner.add_major_read(read)
-        elif classification_mark == self.MINOR:
-            binner.add_minor_read(read)
-        else:
-            binner.add_uncertain_read(read)
-        # end if
     # end def
 # end class
 
@@ -233,94 +233,6 @@ class IlluminaSEReadsClassifier(ReadsClassifier):
                 self._add_read_to_binner(trimmed_read, classification_mark, binner)
             # end if
         # end for
-    # end def
-
-    def _classify_read(self, alignment):
-
-        read_orientation = get_read_orientation(alignment)
-
-        read_start_coord = alignment.get_aln_start_coord()
-        read_end_coord   = alignment.get_aln_end_coord()
-
-        start_primer_num = self._search_primer_bruteforce(
-            read_start_coord,
-            read_orientation
-        )
-
-        start_primer_found = not (start_primer_num is None)
-
-        classification_mark = self.UNCERTAIN
-
-        if start_primer_found:
-            if self._alignment_is_major(read_end_coord,
-                                        start_primer_num,
-                                        read_orientation):
-                classification_mark = self.MAJOR
-                end_primer_num = start_primer_num
-            elif self._alignment_is_minor(read_end_coord,
-                                          start_primer_num,
-                                          read_orientation):
-                classification_mark = self.MINOR
-                end_primer_num = _get_minor_primer_num(start_primer_num, read_orientation)
-            # end if
-        # end if
-
-        if classification_mark == self.UNCERTAIN:
-            end_primer_num = self._search_primer_bruteforce(
-                read_end_coord,
-                Orientation.invert(read_orientation)
-            )
-        # end if
-
-        trimming_rule = self._make_trimming_rule(
-            start_primer_num,
-            end_primer_num,
-            read_orientation
-        )
-
-        return classification_mark, trimming_rule
-    # end def
-
-    def _alignment_is_major(self, read_end_coord, start_primer_num, read_orientation):
-
-        alignment_is_major = self.primer_scheme.check_coord_within_primer(
-            read_end_coord,
-            start_primer_num,
-            Orientation.invert(read_orientation)
-        )
-        return alignment_is_major
-    # end def
-
-    def _alignment_is_minor(self, read_end_coord, start_primer_num, read_orientation):
-        minor_pair_primer_num = _get_minor_primer_num(start_primer_num, read_orientation)
-        alignment_is_minor = self.primer_scheme.check_coord_within_primer(
-            read_end_coord,
-            minor_pair_primer_num,
-            Orientation.invert(read_orientation)
-        )
-        return alignment_is_minor
-    # end def
-
-    def _add_read_to_binner(self, read, classification_mark, binner):
-        if classification_mark == self.MAJOR:
-            binner.add_major_read(read)
-        elif classification_mark == self.MINOR:
-            binner.add_minor_read(read)
-        else:
-            binner.add_uncertain_read(read)
-        # end if
-    # end def
-
-    def _make_trimming_rule(self, start_primer_num, end_primer_num, read_orientation):
-        start_primer = self.primer_scheme.get_primer(
-            start_primer_num,
-            read_orientation
-        )
-        end_primer = self.primer_scheme.get_primer(
-            end_primer_num,
-            Orientation.invert(read_orientation)
-        )
-        return UnpairedTrimmingRule(start_primer, end_primer, read_orientation)
     # end def
 # end class
 
