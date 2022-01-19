@@ -47,8 +47,8 @@ def _parse_command_line():
     )
 
     parser.add_argument(
-        '-u',
-        '--reads-unpaired',
+        '-l',
+        '--reads-long',
         help='TODO',
         required=False
     )

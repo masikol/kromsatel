@@ -27,7 +27,7 @@ class UnpairedOutput(Output):
         self._set_uncertain_outfpath()
 
         self._init_output()
-    # end def __init__
+    # end def
 
     def _init_output(self):
 
@@ -41,30 +41,30 @@ class UnpairedOutput(Output):
         for outfpath in output_fpaths:
             fs.init_file(outfpath)
         # end for
-    # end def init_output
+    # end def
 
     def _set_major_outfpath(self):
         suffix = 'major'
         self.major_outfpath = self._configure_outfpath(suffix)
-    # end def _set_major_outfpath
+    # end def
 
     def _set_minor_outfpath(self):
         suffix = 'minor'
         self.minor_outfpath = self._configure_outfpath(suffix)
-    # end def _set_minor_outfpath
+    # end def
 
     def _set_uncertain_outfpath(self):
         suffix = 'uncertain'
         self.uncertain_outfpath = self._configure_outfpath(suffix)
-    # end def _set_uncertain_outfpath
+    # end def
 
     def _configure_outfpath(self, suffix):
         return os.path.join(
             self.outdir_path,
             '{}_{}.fastq.gz'.format(self.output_prefix, suffix)
         )
-    # end def _configure_outfpath
-# end class UnpairedOutput
+    # end def
+# end class
 
 
 class PairedOutput(Output):

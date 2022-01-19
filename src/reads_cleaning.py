@@ -53,7 +53,7 @@ class NanoporeReadsCleaner(ReadsCleaner):
         super().__init__(kromsatel_args)
         self.classifier = NanoporeReadsClassifier(kromsatel_args)
 
-        self.reads_fpath = self.kromsatel_args.unpaired_read_fpath
+        self.reads_fpath = self.kromsatel_args.long_read_fpath
         self.chunk_size = self.kromsatel_args.chunk_size
 
         num_reads_total = \
@@ -61,7 +61,7 @@ class NanoporeReadsCleaner(ReadsCleaner):
         self.progress = Progress(num_reads_total)
 
         output_prefix = fs.rm_fastq_extention(
-            os.path.basename(kromsatel_args.unpaired_read_fpath)
+            os.path.basename(self.reads_fpath)
         )
         self.binner = UnpairedBinner(self.kromsatel_args.outdir_path, output_prefix)
     # end def

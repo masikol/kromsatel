@@ -21,7 +21,7 @@ class KromsatelArgs:
         # Input data
         self.frw_read_fpath = None
         self.rvr_read_fpath = None
-        self.unpaired_read_fpath = None
+        self.long_read_fpath = None
         self.primers_fpath = None
         self.reference_fpath = None
 
@@ -49,20 +49,20 @@ class KromsatelArgs:
 
     def __repr__(self):
         repr_str = 'KromsatelArgs:\n' \
-        + 'kromsatel_mode = {}\n'       .format(self.kromsatel_mode) \
-        + 'frw_read_fpath = `{}`\n'     .format(self.frw_read_fpath) \
-        + 'rvr_read_fpath = `{}`\n'     .format(self.rvr_read_fpath) \
-        + 'unpaired_read_fpath = `{}`\n'.format(self.unpaired_read_fpath) \
-        + 'primers_fpath = `{}`\n'      .format(self.primers_fpath) \
-        + 'reference_fpath = `{}`\n'    .format(self.reference_fpath) \
-        + 'outdir_path = `{}`\n'        .format(self.outdir_path) \
-        + 'min_len = {}\n'              .format(self.min_len) \
-        + 'threads_num = {}\n'          .format(self.threads_num) \
-        + 'chunk_size = {}\n'           .format(self.chunk_size) \
-        + 'blast_task = {}\n'           .format(self.blast_task) \
-        + 'fixed_crop_len = {}\n'       .format(self.fixed_crop_len) \
-        + 'primer_ext_len = {}\n'       .format(self.primer_ext_len) \
-        + 'use_index = {}\n'            .format(self.use_index)
+        + 'kromsatel_mode = {}\n'   .format(self.kromsatel_mode) \
+        + 'frw_read_fpath = `{}`\n' .format(self.frw_read_fpath) \
+        + 'rvr_read_fpath = `{}`\n' .format(self.rvr_read_fpath) \
+        + 'long_read_fpath = `{}`\n'.format(self.long_read_fpath) \
+        + 'primers_fpath = `{}`\n'  .format(self.primers_fpath) \
+        + 'reference_fpath = `{}`\n'.format(self.reference_fpath) \
+        + 'outdir_path = `{}`\n'    .format(self.outdir_path) \
+        + 'min_len = {}\n'          .format(self.min_len) \
+        + 'threads_num = {}\n'      .format(self.threads_num) \
+        + 'chunk_size = {}\n'       .format(self.chunk_size) \
+        + 'blast_task = {}\n'       .format(self.blast_task) \
+        + 'fixed_crop_len = {}\n'   .format(self.fixed_crop_len) \
+        + 'primer_ext_len = {}\n'   .format(self.primer_ext_len) \
+        + 'use_index = {}\n'        .format(self.use_index)
         return repr_str
     # end def
 
@@ -98,7 +98,7 @@ class KromsatelArgs:
             self.frw_read_fpath = self.argparse_args.reads_R1
             self.rvr_read_fpath = self.argparse_args.reads_R2
         elif self.kromsatel_mode == KromsatelModes.Nanopore:
-            self.unpaired_read_fpath = self.argparse_args.reads_unpaired
+            self.long_read_fpath = self.argparse_args.reads_long
         elif self.kromsatel_mode == KromsatelModes.IlluminaSE:
             self.frw_read_fpath = self.argparse_args.reads_R1
         # end if
@@ -256,7 +256,7 @@ class KromsatelArgumentChecker:
             )
         elif kromsatel_mode == KromsatelModes.Nanopore:
             file_paths_to_check_existance = (
-                self.argparse_args.reads_unpaired,
+                self.argparse_args.reads_long,
             )
         elif kromsatel_mode == KromsatelModes.IlluminaSE:
             file_paths_to_check_existance = (
@@ -443,11 +443,11 @@ class _InvalidFileCombinationError(Exception):
 def _detect_kromsatel_mode(argparse_args):
     read_pass_string = _create_read_pass_string(argparse_args)
 
-    if read_pass_string == 'FRu':
+    if read_pass_string == 'FRl':
         return KromsatelModes.IlluminaPE
-    elif read_pass_string == 'frU':
+    elif read_pass_string == 'frL':
         return KromsatelModes.Nanopore
-    elif read_pass_string == 'Fru':
+    elif read_pass_string == 'Frl':
         return KromsatelModes.IlluminaSE
     # end if
 
@@ -487,51 +487,51 @@ def _check_file_type_combination(argparse_args):
 
     read_pass_string = _create_read_pass_string(argparse_args)
 
-    no_input_data = (read_pass_string == 'fru')
+    no_input_data = (read_pass_string == 'frl')
     if no_input_data:
         raise _InvalidFileCombinationError('\nError: no input data.')
     # end if
 
     mixed_data_strings = (
-        'fRU',
-        'FrU',
-        'FRU',
+        'fRL',
+        'FrL',
+        'FRL',
     )
 
     if read_pass_string in mixed_data_strings:
         error_msg = _make_mixed_data_error_msg(
             argparse_args.reads_R1,
             argparse_args.reads_R2,
-            argparse_args.reads_unpaired
+            argparse_args.reads_long
         )
         raise _InvalidFileCombinationError(error_msg)
     # end if
 # end def
 
 
-def _make_mixed_data_error_msg(frw_fpath, rvr_fpath, unpaired_fpath):
+def _make_mixed_data_error_msg(frw_fpath, rvr_fpath, long_fpath):
     error_msg = '\nError: the program cannot process "mixed" input data,\n' \
-                '  i.e. when both paired (R1/R2) and unpaired read files are passed to it.\n' \
+                '  i.e. when both paired (R1/R2) and long read files are passed to it.\n' \
                 'File of forward reads passed:\n  `{}`\n' \
                 'File of reverse reads passed:\n  `{}`\n' \
-                'File of unpaired reads passed:\n  `{}`\n' \
-                    .format(frw_fpath, rvr_fpath, unpaired_fpath)
+                'File of long reads passed:\n  `{}`\n' \
+                    .format(frw_fpath, rvr_fpath, long_fpath)
     return error_msg
 # end def
 
 
 def _create_read_pass_string(argparse_args):
 
-    frw_reads_passed = not argparse_args.reads_R1       is None
-    rvr_reads_passed = not argparse_args.reads_R2       is None
-    upr_reads_passed = not argparse_args.reads_unpaired is None
+    frw_reads_passed  = not argparse_args.reads_R1   is None
+    rvr_reads_passed  = not argparse_args.reads_R2   is None
+    long_reads_passed = not argparse_args.reads_long is None
 
-    frw_char = 'F' if frw_reads_passed else 'f'
-    rvr_char = 'R' if rvr_reads_passed else 'r'
-    upr_char = 'U' if upr_reads_passed else 'u'
+    frw_char  = 'F' if frw_reads_passed  else 'f'
+    rvr_char  = 'R' if rvr_reads_passed  else 'r'
+    long_char = 'L' if long_reads_passed else 'l'
 
     read_pass_string = '{}{}{}'.format(
-        frw_char, rvr_char, upr_char
+        frw_char, rvr_char, long_char
     )
 
     return read_pass_string

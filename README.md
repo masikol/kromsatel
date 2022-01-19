@@ -4,11 +4,15 @@ Current version is `1.7.d_dev` (2022-01-XX edition).
 
 Kromsatel is a program which preprocesses ("cleans") raw reads of amplicon sequencing.
 
-For example, when the genome of SARS-CoV-2 is sequenced, reads of amplicons produced using [ARTIC](https://artic.network/ncov-2019) protocol can be processed with kromsatel prior to downstream genome analysis. Any other amplicon protocol is (most likely) also acceptable; however, only ARTIC was tested.
+For example, when the genome of SARS-CoV-2 is sequenced, raw reads of amplicons produced using [ARTIC](https://artic.network/ncov-2019) protocol can be processed with kromsatel before any downstream genome analysis. Any other amplicon protocol is (most likely) also acceptable; however, only ARTIC was tested.
 
 ## Description
 
-Kromsatel can process Illumina (paired-end or single-end) and Nanopore read sets.
+### Acceptable input data
+
+- short-reads (e.g. Illumina). Reads may be either paired-end or single-end. Kromsatel was tested on Illumina data.
+
+- long-reads (e.g. Oxford Nanopore). Kromsatel was tested on Oxford Nanopore data.
 
 ### Preprocessing: specifics
 
@@ -20,7 +24,7 @@ For kromsatel, the "preprocessing" stands for the following:
 
 3) Discriminate reads coming from major, minor, and non-specific amplicons (see the picture below, TODO).
 
-4) Split chimeric reads into consistent fragments (only Nanopore reads).
+4) Split chimeric reads into consistent fragments (only long reads).
 
 ## Dependencies
 
@@ -58,7 +62,7 @@ Input:
   -2 (--reads-R2) -- a fastq file of reverse reads.
       The file may be gzipped.
 
-  -u (--reads-unpaired) -- a fastq file of unpaired reads.
+  -l (--reads-long) -- a fastq file of long reads.
       The file may be gzipped.
 
 * -p (--primers) -- a CSV file of primer names and sequences.
@@ -71,15 +75,15 @@ Output:
   -o (--outdir) -- output directory.
       Default value is './kromsatel_output'
 
-  -m (--min-len) -- minimum length of an output read.
-      Default: 25 bp.
-
 Computational resources:
 
   -t (--threads) -- number of threads to launch.
       Default: 1 thread.
 
 Advanced:
+
+  -m (--min-len) -- minimum length of an output read.
+      Default: 25 bp.
 
   -k (--blast-task) -- BLASTn task to launch.
       Allowed values: 'megablast', 'dc-megablast', 'blastn'.
@@ -126,10 +130,10 @@ Advanced:
     -o 20_S30_outdir
 ```
 
-#### Long (e.g. nanopore) reads
+#### Long (e.g. Oxford Nanopore) reads
 ```
 ./kromsatel.py \
-    -u Wuhan-Hu-1.fastq.gz \
+    -l all_pass_15.fastq.gz \
     -p primers/nCov-2019_primers.csv \
     -r reference/Wuhan-Hu-1-compele-genome.fasta \
     -o Wuhan-Hu-1_outdir
@@ -204,11 +208,11 @@ all_pass_15_uncertain.fastq.gz
 
 ### Read names
 
-#### Illumina (paired-end) reads
+#### Short (e.g. Illumina) reads
 
 Kromsatel keeps read headers unchanged.
 
-#### Nanopore reads
+#### Long (e.g. Nanopore) reads
 
 For Nanopore data, kromsatel modifies headers of output reads. Thus, the header of an output read will looklike this:
 
