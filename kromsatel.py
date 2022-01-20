@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-__version__ = '1.7.d_dev'
+__version__ = '1.7.e_dev'
 #                       YYYY-mm-dd
 __last_update_date__ = '2022-01-XX'
 # __author__ = 'Maxim Sikolenko'

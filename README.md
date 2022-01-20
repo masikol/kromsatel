@@ -1,6 +1,6 @@
 # kromsatel
 
-Current version is `1.7.d_dev` (2022-01-XX edition).
+Current version is `1.7.e_dev` (2022-01-XX edition).
 
 Kromsatel is a program which preprocesses ("cleans") raw reads of amplicon sequencing.
 
@@ -74,6 +74,10 @@ Output:
 
   -o (--outdir) -- output directory.
       Default value is './kromsatel_output'
+
+  -s (--split-output) -- split ouput files into 3 "classes":
+      "major", "minor" and "uncertain".
+      Disabled by default.
 
 Computational resources:
 
@@ -155,64 +159,13 @@ Advanced:
     --primer-5ext 3
 ```
 
-## Output files
+## Output read names
 
-#### Paired-end reads
-
-Let input read files be `20_S30_L001_R1_001.fastq.gz` and `20_S30_L001_R2_001.fastq.gz`. For them, kromsatel will produce the following output files:
-
-Pair of files of reads coming from major amplicons:
-```
-20_S30_L001_R1_001_major.fastq.gz
-20_S30_L001_R2_001_major.fastq.gz
-```
-
-Pair of files of reads coming from minor amplicons:
-```
-20_S30_L001_R1_001_minor.fastq.gz
-20_S30_L001_R2_001_minor.fastq.gz
-```
-
-Pair of files of reads coming from non-specific or undetected ampicons:
-```
-20_S30_L001_R1_001_uncertain.fastq.gz
-20_S30_L001_R2_001_uncertain.fastq.gz
-```
-
-Pair of files of reads which lost their pair during preprocessing:
-```
-20_S30_L001_R1_001_unpaired.fastq.gz
-20_S30_L001_R2_001_unpaired.fastq.gz
-```
-#### Single-end reads
-
-Let input read file be `all_pass_15.fastq.gz`. For them, kromsatel will produce the following output files:
-
-File if reads coming from major amplicons:
-
-```
-all_pass_15_major.fastq.gz
-```
-
-File if reads coming from minor amplicons:
-
-```
-all_pass_15_minor.fastq.gz
-```
-
-File if of reads coming from non-specific or undetected ampicons:
-
-```
-all_pass_15_uncertain.fastq.gz
-```
-
-### Read names
-
-#### Short (e.g. Illumina) reads
+### Short (e.g. Illumina) reads
 
 Kromsatel keeps read headers unchanged.
 
-#### Long (e.g. Nanopore) reads
+### Long (e.g. Nanopore) reads
 
 For Nanopore data, kromsatel modifies headers of output reads. Thus, the header of an output read will looklike this:
 
