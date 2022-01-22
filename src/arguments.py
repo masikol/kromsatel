@@ -420,9 +420,12 @@ class KromsatelArgumentChecker:
         # end if
 
         blast_task = self.argparse_args.blast_task
+        if blast_task is None:
+            blast_task = src.blast.BLAST_TASKS[0]
+        # end if
 
         blast_task_cant_use_index = use_index_string == 'true' \
-                                    and not blast_task in src.blast.TASKS_SUPPORT_INDEXED_SEARCH
+            and not blast_task in src.blast.TASKS_SUPPORT_INDEXED_SEARCH
         if blast_task_cant_use_index:
             error_msg = '\nError: BLAST task {} cannot use indexed search' \
                 .format(blast_task)
