@@ -88,6 +88,7 @@ class KromsatelArgs:
         self._set_outdpath()
         self._set_split_output()
         self._set_min_len()
+        self._set_chunk_size()
         self._set_threads_num()
         self._set_blast_task()
         self._set_fixed_crop_len()
@@ -146,6 +147,13 @@ class KromsatelArgs:
         if not self.argparse_args.min_len is None:
             min_len_string = self.argparse_args.min_len
             self.min_len = int(min_len_string)
+        # end if
+    # end def
+
+    def _set_chunk_size(self):
+        if not self.argparse_args.chunk_size is None:
+            chunk_size_string = self.argparse_args.chunk_size
+            self.chunk_size = int(chunk_size_string)
         # end if
     # end def
 
