@@ -23,7 +23,7 @@ def print_help(version, last_update_data):
     )
 
     lines_of_usage = takewhile(
-        lambda line: line != '#### With all possible options\n',
+        lambda line: line != '#### With additional options\n',
         lines_after_usage
     )
 

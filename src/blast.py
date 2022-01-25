@@ -92,7 +92,7 @@ def create_reference_database(kromsatel_args):
     fs.create_dir(db_dirpath)
     db_fpath = os.path.join(db_dirpath, 'kromsatel_blast_database')
 
-    print('{} - Creating the reference database for BLAST:\n  `{}`...'.format(getwt(), db_fpath))
+    print('{} - Creating a reference database for BLAST:\n  `{}`...'.format(getwt(), db_fpath))
     _make_blast_db(kromsatel_args.reference_fpath, db_fpath)
     print('{} - Database: created'.format(getwt()))
 
@@ -115,7 +115,7 @@ def _make_blast_db(reference_fpath, db_fpath):
     stdout_stderr = pipe.communicate()
 
     if pipe.returncode != 0:
-        error_msg = '\nError: Cannot create blast database' \
+        error_msg = '\nError: Cannot create a blast database' \
             '{}\n Command: `{}`' \
                 .format(stdout_stderr[1].decode('utf-8'), makeblastdb_cmd)
         raise FatalError(error_msg)

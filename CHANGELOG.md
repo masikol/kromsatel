@@ -1,5 +1,16 @@
 # kromsatel changelog
 
+## 2022-01-25 edition
+
+Major unpdate.
+
+1. Kromsatel now does not depend on numpy as pandas Python packages.
+2. The core kromsatel algorithm has been completely rewritten.
+3. Kromsatel now can process both unpaired and paired-end reads.
+4. "db_scripts" have been removed.
+
+Version change: `1.6.b --> 2.0.a`.
+
 ## 2021-12-01 edition
 
 Kromsatel now keeps whole fastq read heders in output files instead of just the part before the first space.

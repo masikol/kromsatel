@@ -1,18 +1,18 @@
 # kromsatel
 
-Current version is `1.7.e_dev` (2022-01-XX edition).
+Current version is `2.0.a` (2022-01-25 edition).
 
 Kromsatel is a program which preprocesses ("cleans") raw reads of amplicon sequencing.
 
-For example, when the genome of SARS-CoV-2 is sequenced, raw reads of amplicons produced using [ARTIC](https://artic.network/ncov-2019) protocol can be processed with kromsatel before any downstream genome analysis. Any other amplicon protocol is (most likely) also acceptable; however, only ARTIC was tested.
+For example, when the genome of SARS-CoV-2 is sequenced, raw reads of amplicons produced using [ARTIC](https://artic.network/ncov-2019) protocol can be processed with kromsatel before any downstream sequence analysis. Any other amplicon protocol is (most likely) also acceptable; however, only ARTIC has been tested.
 
 ## Description
 
 ### Acceptable input data
 
-- short-reads (e.g. Illumina). Reads may be either paired-end or single-end. Kromsatel was tested on Illumina data.
+- short reads (e.g. Illumina). Reads may be either paired-end or single-end. Kromsatel was tested on Illumina data.
 
-- long-reads (e.g. Oxford Nanopore). Kromsatel was tested on Oxford Nanopore data.
+- long reads (e.g. Oxford Nanopore). Kromsatel was tested on Oxford Nanopore data.
 
 ### Preprocessing: specifics
 
