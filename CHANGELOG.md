@@ -1,5 +1,14 @@
 # kromsatel changelog
 
+## 2022-02-23 edition
+
+Some minor modifications:
+
+1. Kromsatel now terminates with an error if forward-read file (`-1/--reads-R1`) and reverse-read file (`-2/--reads-R2`) are actually the same file.
+2. Kromsatel now prints its settings, which are used for a current run.
+
+Version change: `2.0.a --> 2.0.b`.
+
 ## 2022-01-25 edition
 
 Major unpdate.

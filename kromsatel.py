@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
-__version__ = '2.0.a'
+__version__ = '2.0.b'
 #                       YYYY-mm-dd
-__last_update_date__ = '2022-01-25'
+__last_update_date__ = '2022-02-23'
 # __author__ = 'Maxim Sikolenko'
 
 
@@ -36,7 +36,10 @@ if '-v' in sys.argv[1:] or '--version' in sys.argv[1:] or '-version' in sys.argv
 
 import src.print_help
 
-if '-h' in sys.argv[1:] or '--help' in sys.argv[1:] or '-help' in sys.argv[1:]:
+if len(sys.argv) == 1 \
+   or '-h' in sys.argv[1:] \
+   or '--help' in sys.argv[1:] \
+   or '-help' in sys.argv[1:]:
     src.print_help.print_help(__version__, __last_update_date__)
     platformwise_exit(0)
 # end if

@@ -1,6 +1,6 @@
 # kromsatel
 
-Current version is `2.0.a` (2022-01-25 edition).
+Current version is `2.0.b` (2022-02-23 edition).
 
 Kromsatel is a program which preprocesses ("cleans") raw reads of amplicon sequencing.
 

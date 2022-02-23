@@ -17,6 +17,8 @@ def main():
 
     _check_blastplus_dependencies(args)
 
+    print(str(args), end='\n\n')
+
     db_fpath = _create_database(args)
     args.set_database_path(db_fpath)
 

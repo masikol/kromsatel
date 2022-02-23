@@ -16,22 +16,6 @@ def _parse_command_line():
 
     parser = argparse.ArgumentParser()
 
-    # parser.add_argument(
-    #     '-h',
-    #     '--help',
-    #     help='TODO',
-    #     required=False,
-    #     action="store_true"
-    # )
-
-    # parser.add_argument(
-    #     '-v',
-    #     '--version',
-    #     help='TODO',
-    #     required=False,
-    #     action="store_true"
-    # )
-
     parser.add_argument(
         '-1',
         '--reads-R1',

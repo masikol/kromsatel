@@ -68,6 +68,40 @@ class KromsatelArgs:
         return repr_str
     # end def
 
+    def __str__(self):
+        args_str = 'Arguments:\n'
+        KromsatelModes.IlluminaPE
+        KromsatelModes.Nanopore
+        KromsatelModes.IlluminaSE
+        if self.kromsatel_mode == KromsatelModes.IlluminaSE:
+            args_str += '- Reads: `{}`;\n'.format(self.frw_read_fpath)
+        elif self.kromsatel_mode == KromsatelModes.IlluminaPE:
+            args_str += '- Forward reads: `{}`;\n'.format(self.frw_read_fpath)
+            args_str += '- Reverse reads: `{}`;\n'.format(self.rvr_read_fpath)
+        else:
+            args_str += '- Long reads: `{}`;\n'.format(self.long_read_fpath)
+        # end if
+
+        if self.fixed_crop_len == 'auto':
+            str_fixed_crop_len = self.fixed_crop_len
+        else:
+            str_fixed_crop_len = '{} bp'.format(self.fixed_crop_len)
+        # end if
+
+        args_str += '- Primers: `{}`;\n'             .format(self.primers_fpath) \
+                 + '- Reference: `{}`;\n'            .format(self.reference_fpath) \
+                 + '- Output directory: `{}`;\n'     .format(self.outdir_path) \
+                 + '- Split output: {};\n'           .format(self.split_output) \
+                 + '- Min output len: {} bp;\n'      .format(self.min_len) \
+                 + '- Threads: {};\n'                .format(self.threads_num) \
+                 + '- Chunk size: {} reads;\n'       .format(self.chunk_size) \
+                 + '- BLAST task: "{}";\n'           .format(self.blast_task) \
+                 + '- Crop length: {};\n'            .format(str_fixed_crop_len) \
+                 + '- 5\'-primer extention: {} bp;\n'.format(self.primer_ext_len) \
+                 + '- Use BLAST index: {};'          .format(self.use_index)
+        return args_str
+    # end def
+
     def set_output(self, output):
         self.output = output
     # end def
@@ -171,7 +205,12 @@ class KromsatelArgs:
 
     def _set_fixed_crop_len(self):
         if not self.argparse_args.crop_len is None:
-            self.fixed_crop_len = self.argparse_args.crop_len
+            if self.argparse_args.crop_len == 'auto':
+                value_to_set = self.argparse_args.crop_len
+            else:
+                value_to_set = int(self.argparse_args.crop_len)
+            # end if
+            self.fixed_crop_len = value_to_set
         # end if
     # end def
 
@@ -258,6 +297,16 @@ class KromsatelArgumentChecker:
         except FileNotFoundError as err:
             raise FatalError(str(err))
         # end try
+
+        # Check if paired-end read files specified are the same file
+        if kromsatel_mode == KromsatelModes.IlluminaPE:
+            if self.argparse_args.reads_R1 == self.argparse_args.reads_R2:
+                error_msg = '\nError: the file of forward (R1) and ' \
+                    'the file of reverse (R2) reads are the same file:\n  `{}`' \
+                    .format(self.argparse_args.reads_R1)
+                raise FatalError(error_msg)
+            # end if
+        # end if
     # end def
 
     def _reads_files_exist(self, kromsatel_mode):
